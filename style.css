@@ -95,22 +95,57 @@ input[type="password"]::placeholder { color: var(--muted); }
 input[type="text"]:focus,
 input[type="password"]:focus { border-color: var(--border2); }
 
-/* search row */
-.search-row { display: flex; gap: 6px; }
-.search-row input { flex: 1; }
-.search-row button {
+/* ── Top Search Bar ──────────────────────────────────────── */
+#topSearch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+#searchBarWrap {
+  display: flex;
+  width: 100%;
+  max-width: 600px;
+  gap: 0;
+}
+
+#searchBarWrap input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  padding: 11px 18px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: auto;
+}
+#searchBarWrap input::placeholder { color: var(--muted); }
+#searchBarWrap input:focus { border-color: var(--muted); }
+
+#searchBarWrap button {
   background: var(--yt) !important;
   border: none !important;
-  border-radius: var(--radius) !important;
+  border-radius: 0 var(--radius) var(--radius) 0 !important;
   color: #fff !important;
   cursor: pointer;
-  font-size: 14px;
-  width: 34px !important;
-  padding: 0 !important;
-  flex-shrink: 0;
+  font-family: var(--sans) !important;
+  font-size: 14px !important;
+  font-weight: 500;
+  padding: 11px 22px !important;
+  width: auto !important;
+  white-space: nowrap;
   transition: opacity 0.12s !important;
+  letter-spacing: 0.02em;
 }
-.search-row button:hover { opacity: 0.85 !important; }
+#searchBarWrap button:hover { opacity: 0.85 !important; }
 
 /* generic sidebar buttons */
 button:not(.nav-btn):not(.search-row button):not(.card-del):not(#closePlayer):not(#closeSearch):not(#prevPageBtn):not(#nextPageBtn) {
@@ -151,9 +186,6 @@ button:not(.nav-btn):not(.search-row button):not(.card-del):not(#closePlayer):no
 }
 .danger-btn:hover { background: #180a0a !important; }
 
-#apiKeyStatus { font-size: 11px; color: var(--sub); min-height: 14px; }
-#apiKeyStatus.ok  { color: #4caf50; }
-#apiKeyStatus.err { color: var(--yt); }
 
 /* ── Main ────────────────────────────────────────────────── */
 #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
