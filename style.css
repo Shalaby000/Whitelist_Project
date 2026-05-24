@@ -236,7 +236,7 @@ button:not(.nav-btn):not(.search-row button):not(.card-del):not(#closePlayer):no
   background: var(--surface2);
   display: flex;
   flex-direction: column;
-  max-height: 46vh;
+  max-height: 60vh;
 }
 #searchPanel.hidden { display: none; }
 
@@ -302,56 +302,86 @@ button:not(.nav-btn):not(.search-row button):not(.card-del):not(#closePlayer):no
 #prevPageBtn:hover, #nextPageBtn:hover { background: var(--border2) !important; }
 #prevPageBtn.hidden, #nextPageBtn.hidden { display: none !important; }
 
-/* search result card */
+/* ── Search Results — List Layout ────────────────────────── */
+#searchGrid {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 0 !important;
+  overflow-y: auto;
+  flex: 1;
+}
+
 .result-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  overflow: visible;
   cursor: pointer;
-  transition: border-color 0.12s, transform 0.12s;
+  padding: 12px 20px;
+  transition: background 0.12s;
   position: relative;
 }
-.result-card:hover { border-color: var(--yt); transform: translateY(-2px); }
+.result-card:hover { background: var(--surface); border-color: var(--border); }
+.result-card:last-child { border-bottom: none; }
 
 .result-thumb {
-  width: 100%;
+  width: 200px;
+  min-width: 200px;
   aspect-ratio: 16/9;
   object-fit: cover;
   display: block;
   background: var(--bg);
+  border-radius: var(--radius);
+  flex-shrink: 0;
 }
-.result-info { padding: 7px 9px; }
+
+.result-info {
+  flex: 1;
+  padding: 2px 0;
+  min-width: 0;
+}
+
 .result-title {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--text);
-  white-space: nowrap;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  margin-bottom: 8px;
+  white-space: normal;
 }
-.result-channel { font-size: 10px; color: var(--sub); margin-top: 2px; }
+
+.result-channel {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 4px;
+}
 
 .result-add {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background: rgba(0,0,0,0.75) !important;
+  flex-shrink: 0;
+  background: var(--border) !important;
   border: none !important;
-  border-radius: 50% !important;
-  color: #fff !important;
-  width: 24px !important;
-  height: 24px !important;
-  padding: 0 !important;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: var(--radius) !important;
+  color: var(--text) !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
   opacity: 0;
-  transition: opacity 0.12s !important;
+  transition: opacity 0.12s, background 0.12s !important;
   cursor: pointer;
+  white-space: nowrap;
+  align-self: center;
 }
 .result-card:hover .result-add { opacity: 1; }
-.result-add:hover { background: var(--yt) !important; }
+.result-add:hover { background: var(--yt) !important; color: #fff !important; }
 
 /* ── Library Grid ────────────────────────────────────────── */
 #gridSection { flex: 1; overflow-y: auto; padding: 20px; }
