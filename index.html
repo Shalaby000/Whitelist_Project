@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="logo">▶ media</div>
+
+    <nav>
+      <button class="nav-btn active" data-filter="all">All</button>
+      <button class="nav-btn" data-filter="video">Videos</button>
+      <button class="nav-btn" data-filter="audio">Audios</button>
+    </nav>
+
+    <!-- API KEY SETUP -->
+    <div class="sidebar-section" id="apiKeySection">
+      <p class="section-label">YouTube API Key</p>
+      <input id="apiKeyInput" type="password" placeholder="Paste your API key…" />
+      <button id="saveApiKeyBtn">Save key</button>
+      <span id="apiKeyStatus"></span>
+    </div>
+
+    <!-- YOUTUBE SEARCH -->
+    <div class="sidebar-section">
+      <p class="section-label">Search YouTube</p>
+      <div class="search-row">
+        <input id="searchInput" type="text" placeholder="Search videos…" />
+        <button id="searchBtn" title="Search">↵</button>
+      </div>
+    </div>
+
+    <!-- ADD FROM URL -->
+    <div class="sidebar-section">
+      <p class="section-label">Add from URL</p>
+      <input id="urlInput" type="text" placeholder="Paste a link…" />
+      <input id="titleInput" type="text" placeholder="Title (optional)" />
+      <button id="addUrlBtn">Add</button>
+    </div>
+
+    <!-- UPLOAD FILE -->
+    <div class="sidebar-section">
+      <p class="section-label">Upload file</p>
+      <label class="upload-label" for="fileInput">Choose file</label>
+      <input id="fileInput" type="file" accept="video/*,audio/*" hidden />
+      <span id="fileName">No file chosen</span>
+      <button id="addFileBtn">Add</button>
+    </div>
+
+    <div class="sidebar-section">
+      <button id="clearBtn" class="danger-btn">Clear library</button>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main id="main">
+
+    <!-- PLAYER -->
+    <section id="playerSection" class="hidden">
+      <div id="playerWrap">
+        <video id="videoPlayer" controls></video>
+        <audio id="audioPlayer" controls></audio>
+      </div>
+      <div id="nowPlaying">
+        <span id="nowTitle"></span>
+        <button id="closePlayer">✕</button>
+      </div>
+    </section>
+
+    <!-- SEARCH RESULTS PANEL -->
+    <section id="searchPanel" class="hidden">
+      <div id="searchHeader">
+        <span id="searchLabel"></span>
+        <button id="closeSearch">✕ Close results</button>
+      </div>
+      <div id="searchGrid"></div>
+      <div id="searchLoading" class="hidden">Searching…</div>
+      <div id="searchEmpty" class="hidden">No results found.</div>
+      <div id="searchPagination">
+        <button id="prevPageBtn" class="hidden">← Prev</button>
+        <button id="nextPageBtn" class="hidden">Next →</button>
+      </div>
+    </section>
+
+    <!-- LIBRARY GRID -->
+    <section id="gridSection">
+      <div id="grid"></div>
+      <div id="empty">
+        <p>Your library is empty.</p>
+        <p class="sub">Search YouTube or add a URL from the sidebar.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
