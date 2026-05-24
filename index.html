@@ -21,23 +21,6 @@
       <button class="nav-btn" data-filter="audio">Audios</button>
     </nav>
 
-    <!-- API KEY SETUP -->
-    <div class="sidebar-section" id="apiKeySection">
-      <p class="section-label">YouTube API Key</p>
-      <input id="apiKeyInput" type="password" placeholder="Paste your API key…" />
-      <button id="saveApiKeyBtn">Save key</button>
-      <span id="apiKeyStatus"></span>
-    </div>
-
-    <!-- YOUTUBE SEARCH -->
-    <div class="sidebar-section">
-      <p class="section-label">Search YouTube</p>
-      <div class="search-row">
-        <input id="searchInput" type="text" placeholder="Search videos…" />
-        <button id="searchBtn" title="Search">↵</button>
-      </div>
-    </div>
-
     <!-- ADD FROM URL -->
     <div class="sidebar-section">
       <p class="section-label">Add from URL</p>
@@ -62,6 +45,14 @@
 
   <!-- MAIN AREA -->
   <main id="main">
+
+    <!-- TOP SEARCH BAR -->
+    <div id="topSearch">
+      <div id="searchBarWrap">
+        <input id="searchInput" type="text" placeholder="Search YouTube…" autocomplete="off" />
+        <button id="searchBtn">Search</button>
+      </div>
+    </div>
 
     <!-- PLAYER -->
     <section id="playerSection" class="hidden">
