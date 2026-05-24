@@ -2,6 +2,8 @@
    MEDIA SITE — app.js
 ═══════════════════════════════════════════════════════════ */
 
+document.addEventListener('DOMContentLoaded', () => {
+
 const STORAGE_KEY = 'media_items_v1';
 const YT_API_KEY  = 'AIzaSyAZUCqqyzKfbFLyRP7qOasCGTgsA65tyy0';
 
@@ -10,8 +12,6 @@ let items         = loadItems();
 let currentFilter = 'all';
 let currentFile   = null;
 let panicActive   = false;
-let pausedByPanic = false;
-
 let searchPageTokens = [null];
 let searchPageIndex  = 0;
 let lastQuery        = '';
@@ -29,14 +29,12 @@ const fileNameEl    = $('fileName');
 const addFileBtn    = $('addFileBtn');
 const clearBtn      = $('clearBtn');
 const navBtns       = document.querySelectorAll('.nav-btn');
-
 const playerSection = $('playerSection');
 const playerWrap    = $('playerWrap');
 const videoPlayer   = $('videoPlayer');
 const audioPlayer   = $('audioPlayer');
 const nowTitle      = $('nowTitle');
 const closePlayer   = $('closePlayer');
-
 const searchInput   = $('searchInput');
 const searchBtn     = $('searchBtn');
 const searchPanel   = $('searchPanel');
@@ -50,9 +48,8 @@ const nextPageBtn   = $('nextPageBtn');
 
 /* ── Panic Button ───────────────────────────────────────── */
 const panicBtn = document.createElement('button');
-panicBtn.id = 'panicBtn';
-panicBtn.title = 'Hide screen (click again or press Esc to restore)';
 panicBtn.textContent = '⬜  Hide screen';
+panicBtn.title = 'Hide screen — click or press Esc to restore';
 panicBtn.style.cssText = `
   background: #1a1a1a !important;
   border: 1px solid #333 !important;
@@ -77,16 +74,15 @@ document.body.appendChild(panicOverlay);
 function activatePanic() {
   panicActive = true;
   panicOverlay.style.display = 'block';
-  if (!videoPlayer.paused) { videoPlayer.pause(); pausedByPanic = true; }
-  if (!audioPlayer.paused) { audioPlayer.pause(); pausedByPanic = true; }
+  if (!videoPlayer.paused) videoPlayer.pause();
+  if (!audioPlayer.paused) audioPlayer.pause();
   const iframe = document.getElementById('ytFrame');
-  if (iframe) { iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*'); pausedByPanic = true; }
+  if (iframe) iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
 }
 
 function deactivatePanic() {
   panicActive = false;
   panicOverlay.style.display = 'none';
-  pausedByPanic = false;
 }
 
 panicBtn.addEventListener('click', () => panicActive ? deactivatePanic() : activatePanic());
@@ -135,7 +131,7 @@ function ytThumb(videoId) {
 }
 
 /* ── YouTube Search ─────────────────────────────────────── */
-searchBtn.addEventListener('click', doSearch);
+searchBtn.addEventListener('click', () => doSearch());
 searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
 async function doSearch(pageToken = null) {
@@ -319,9 +315,10 @@ addUrlBtn.addEventListener('click', () => {
     saveItems();
     render();
   }
-  urlInput.value = '';
+  urlInput.value   = '';
   titleInput.value = '';
 });
+
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') addUrlBtn.click(); });
 
 fileInput.addEventListener('change', () => {
@@ -336,10 +333,10 @@ addFileBtn.addEventListener('click', () => {
   const title = titleInput.value.trim() || currentFile.name.replace(/\.[^.]+$/, '');
   items.unshift({ id: uid(), src, type, title, blob: true });
   render();
-  fileInput.value = '';
+  fileInput.value        = '';
   fileNameEl.textContent = 'No file chosen';
-  titleInput.value = '';
-  currentFile = null;
+  titleInput.value       = '';
+  currentFile            = null;
 });
 
 function removeItem(id) {
@@ -430,3 +427,5 @@ function render() {
 
 /* ── Init ───────────────────────────────────────────────── */
 render();
+
+}); // end DOMContentLoaded
