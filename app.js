@@ -128,7 +128,7 @@ function uid() {
 }
 
 function getApiKey() {
-  return localStorage.getItem(API_KEY_STORE) || '';
+  return 'AIzaSyAZUCqqyzKfbFLyRP7qOasCGTgsA65tyy0';
 }
 
 function detectType(src) {
