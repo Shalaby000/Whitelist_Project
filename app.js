@@ -48,16 +48,23 @@ const nextPageBtn   = $('nextPageBtn');
 
 /* ── Panic Button ───────────────────────────────────────── */
 const panicBtn = document.createElement('button');
-panicBtn.textContent = '⬜  Hide screen';
-panicBtn.title = 'Hide screen — click or press Esc to restore';
+panicBtn.textContent = '⬜';
+panicBtn.title = 'Hide screen (K)';
 panicBtn.style.cssText = `
   background: #1a1a1a !important;
-  border: 1px solid #333 !important;
-  color: #888 !important;
-  font-size: 12px;
-  letter-spacing: 0.03em;
+  border: 1px solid #2a2a2a !important;
+  color: #555 !important;
+  font-size: 16px;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer;
   margin-top: auto;
+  align-self: flex-start;
+  transition: border-color 0.12s, color 0.12s !important;
 `;
+document.getElementById('sidebar').appendChild(panicBtn);
 document.getElementById('sidebar').appendChild(panicBtn);
 
 const panicOverlay = document.createElement('div');
@@ -89,7 +96,7 @@ panicBtn.addEventListener('click', () => panicActive ? deactivatePanic() : activ
 panicOverlay.addEventListener('click', deactivatePanic);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && panicActive) deactivatePanic();
-  if (e.key === '`' && !e.target.matches('input, textarea')) {
+  if (e.key === 'k' && !e.target.matches('input, textarea')) {
     panicActive ? deactivatePanic() : activatePanic();
   }
 });
@@ -213,7 +220,7 @@ function renderSearchResults(results) {
         <div class="result-title" title="${title}">${title}</div>
         <div class="result-channel">${channel}</div>
       </div>
-      <button class="result-add" title="Add to library">+</button>
+      <button class="result-add" title="Save to library">+ Save</button>
     `;
 
     card.addEventListener('click', e => {
@@ -225,8 +232,8 @@ function renderSearchResults(results) {
       e.stopPropagation();
       addToLibrary({ videoId, title, channel, thumb });
       const btn = e.currentTarget;
-      btn.textContent = '✓';
-      setTimeout(() => { btn.textContent = '+'; }, 1500);
+      btn.textContent = '✓ Saved';
+      setTimeout(() => { btn.textContent = '+ Save'; }, 1500);
     });
 
     searchGrid.appendChild(card);
