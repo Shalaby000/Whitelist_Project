@@ -1,10 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
    MEDIA SITE — app.js
-   Features: YouTube search, URL add, file upload, panic button
 ═══════════════════════════════════════════════════════════ */
 
-const STORAGE_KEY    = 'media_items_v1';
-const API_KEY_STORE  = 'yt_api_key_v1';
+const STORAGE_KEY = 'media_items_v1';
+const YT_API_KEY  = 'AIzaSyAZUCqqyzKfbFLyRP7qOasCGTgsA65tyy0';
 
 /* ── State ──────────────────────────────────────────────── */
 let items         = loadItems();
@@ -13,9 +12,7 @@ let currentFile   = null;
 let panicActive   = false;
 let pausedByPanic = false;
 
-// YouTube search pagination
-let searchResults   = [];
-let searchPageTokens = [null]; // index 0 = first page (no token)
+let searchPageTokens = [null];
 let searchPageIndex  = 0;
 let lastQuery        = '';
 
@@ -51,14 +48,10 @@ const closeSearch   = $('closeSearch');
 const prevPageBtn   = $('prevPageBtn');
 const nextPageBtn   = $('nextPageBtn');
 
-const apiKeyInput   = $('apiKeyInput');
-const saveApiKeyBtn = $('saveApiKeyBtn');
-const apiKeyStatus  = $('apiKeyStatus');
-
-/* ── Panic Button (injected into sidebar) ───────────────── */
+/* ── Panic Button ───────────────────────────────────────── */
 const panicBtn = document.createElement('button');
 panicBtn.id = 'panicBtn';
-panicBtn.title = 'Hide screen (press again or Esc to restore)';
+panicBtn.title = 'Hide screen (click again or press Esc to restore)';
 panicBtn.textContent = '⬜  Hide screen';
 panicBtn.style.cssText = `
   background: #1a1a1a !important;
@@ -70,9 +63,7 @@ panicBtn.style.cssText = `
 `;
 document.getElementById('sidebar').appendChild(panicBtn);
 
-/* ── Panic Overlay ──────────────────────────────────────── */
 const panicOverlay = document.createElement('div');
-panicOverlay.id = 'panicOverlay';
 panicOverlay.style.cssText = `
   display: none;
   position: fixed;
@@ -86,8 +77,6 @@ document.body.appendChild(panicOverlay);
 function activatePanic() {
   panicActive = true;
   panicOverlay.style.display = 'block';
-
-  // Pause any playing media silently
   if (!videoPlayer.paused) { videoPlayer.pause(); pausedByPanic = true; }
   if (!audioPlayer.paused) { audioPlayer.pause(); pausedByPanic = true; }
   const iframe = document.getElementById('ytFrame');
@@ -100,13 +89,10 @@ function deactivatePanic() {
   pausedByPanic = false;
 }
 
-panicBtn.addEventListener('click', () => {
-  panicActive ? deactivatePanic() : activatePanic();
-});
+panicBtn.addEventListener('click', () => panicActive ? deactivatePanic() : activatePanic());
 panicOverlay.addEventListener('click', deactivatePanic);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && panicActive) deactivatePanic();
-  // Shortcut: backtick ` key anywhere
   if (e.key === '`' && !e.target.matches('input, textarea')) {
     panicActive ? deactivatePanic() : activatePanic();
   }
@@ -119,16 +105,11 @@ function loadItems() {
 }
 
 function saveItems() {
-  const saveable = items.filter(it => !it.blob);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(saveable));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items.filter(it => !it.blob)));
 }
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
-function getApiKey() {
-  return localStorage.getItem(API_KEY_STORE) || '';
 }
 
 function detectType(src) {
@@ -153,24 +134,6 @@ function ytThumb(videoId) {
   return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 }
 
-/* ── API Key ────────────────────────────────────────────── */
-function initApiKeyUI() {
-  const saved = getApiKey();
-  if (saved) {
-    apiKeyInput.value = saved;
-    apiKeyStatus.textContent = '✓ Key saved';
-    apiKeyStatus.className = 'ok';
-  }
-}
-
-saveApiKeyBtn.addEventListener('click', () => {
-  const key = apiKeyInput.value.trim();
-  if (!key) { apiKeyStatus.textContent = 'Enter a key first'; apiKeyStatus.className = 'err'; return; }
-  localStorage.setItem(API_KEY_STORE, key);
-  apiKeyStatus.textContent = '✓ Key saved';
-  apiKeyStatus.className = 'ok';
-});
-
 /* ── YouTube Search ─────────────────────────────────────── */
 searchBtn.addEventListener('click', doSearch);
 searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
@@ -179,20 +142,11 @@ async function doSearch(pageToken = null) {
   const q = searchInput.value.trim();
   if (!q) return;
 
-  const key = getApiKey();
-  if (!key) {
-    apiKeyStatus.textContent = '⚠ Add API key first';
-    apiKeyStatus.className = 'err';
-    apiKeyInput.focus();
-    return;
-  }
-
   if (q !== lastQuery) {
-    // New query — reset pagination
     lastQuery = q;
     searchPageTokens = [null];
     searchPageIndex = 0;
-    if (pageToken === null) pageToken = null;
+    pageToken = null;
   }
 
   searchPanel.classList.remove('hidden');
@@ -204,7 +158,7 @@ async function doSearch(pageToken = null) {
   searchLabel.textContent = `Results for "${q}"`;
 
   try {
-    let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=${encodeURIComponent(q)}&key=${key}`;
+    let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=${encodeURIComponent(q)}&key=${YT_API_KEY}`;
     if (pageToken) url += `&pageToken=${pageToken}`;
 
     const res  = await fetch(url);
@@ -213,27 +167,20 @@ async function doSearch(pageToken = null) {
     searchLoading.classList.add('hidden');
 
     if (data.error) {
-      searchEmpty.textContent = `API error: ${data.error.message}`;
+      searchEmpty.textContent = `Error: ${data.error.message}`;
       searchEmpty.classList.remove('hidden');
       return;
     }
 
     const results = data.items || [];
-    if (results.length === 0) {
-      searchEmpty.classList.remove('hidden');
-      return;
-    }
+    if (results.length === 0) { searchEmpty.classList.remove('hidden'); return; }
 
-    // Store next page token
-    if (data.nextPageToken) {
-      if (searchPageTokens.length === searchPageIndex + 1) {
-        searchPageTokens.push(data.nextPageToken);
-      }
+    if (data.nextPageToken && searchPageTokens.length === searchPageIndex + 1) {
+      searchPageTokens.push(data.nextPageToken);
     }
 
     renderSearchResults(results);
 
-    // Pagination buttons
     if (searchPageIndex > 0) prevPageBtn.classList.remove('hidden');
     if (data.nextPageToken)  nextPageBtn.classList.remove('hidden');
 
@@ -273,20 +220,17 @@ function renderSearchResults(results) {
       <button class="result-add" title="Add to library">+</button>
     `;
 
-    // Play on click
     card.addEventListener('click', e => {
       if (e.target.classList.contains('result-add')) return;
       playYouTube(videoId, title);
     });
 
-    // Add to library
     card.querySelector('.result-add').addEventListener('click', e => {
       e.stopPropagation();
       addToLibrary({ videoId, title, channel, thumb });
       const btn = e.currentTarget;
       btn.textContent = '✓';
-      btn.style.background = '#4caf50 !important';
-      setTimeout(() => { btn.textContent = '+'; btn.style.background = ''; }, 1500);
+      setTimeout(() => { btn.textContent = '+'; }, 1500);
     });
 
     searchGrid.appendChild(card);
@@ -306,10 +250,7 @@ function playYouTube(videoId, title) {
   stopAllMedia();
   playerSection.classList.remove('hidden');
   nowTitle.textContent = title;
-
-  // Remove existing iframe or native players
   playerWrap.innerHTML = '';
-
   const iframe = document.createElement('iframe');
   iframe.id = 'ytFrame';
   iframe.src = ytEmbed(videoId);
@@ -319,33 +260,23 @@ function playYouTube(videoId, title) {
   playerWrap.appendChild(iframe);
 }
 
-/* ── Play local / URL ───────────────────────────────────── */
+/* ── Play Item ──────────────────────────────────────────── */
 function playItem(item) {
   stopAllMedia();
   playerSection.classList.remove('hidden');
   nowTitle.textContent = item.title;
 
-  // Restore native players if needed
-  if (!document.getElementById('videoPlayer')) {
+  const iframe = document.getElementById('ytFrame');
+  if (iframe || !document.getElementById('videoPlayer')) {
     playerWrap.innerHTML = '';
     playerWrap.appendChild(videoPlayer);
     playerWrap.appendChild(audioPlayer);
-  } else {
-    const iframe = document.getElementById('ytFrame');
-    if (iframe) {
-      playerWrap.innerHTML = '';
-      playerWrap.appendChild(videoPlayer);
-      playerWrap.appendChild(audioPlayer);
-    }
   }
 
   videoPlayer.classList.add('hidden');
   audioPlayer.classList.add('hidden');
 
-  if (item.youtube) {
-    playYouTube(item.videoId, item.title);
-    return;
-  }
+  if (item.youtube) { playYouTube(item.videoId, item.title); return; }
 
   if (item.type === 'video') {
     videoPlayer.classList.remove('hidden');
@@ -363,24 +294,21 @@ function stopAllMedia() {
   if (!audioPlayer.paused) audioPlayer.pause();
   videoPlayer.src = '';
   audioPlayer.src = '';
-  const oldFrame = document.getElementById('ytFrame');
-  if (oldFrame) oldFrame.src = '';
+  const f = document.getElementById('ytFrame');
+  if (f) f.src = '';
 }
 
-/* ── Add to Library ─────────────────────────────────────── */
+/* ── Library ────────────────────────────────────────────── */
 function addToLibrary({ videoId, title, channel, thumb }) {
-  // Avoid duplicates
   if (items.find(it => it.videoId === videoId)) return;
   items.unshift({ id: uid(), videoId, title, channel, thumb, type: 'video', youtube: true });
   saveItems();
   render();
 }
 
-/* ── Add from URL ───────────────────────────────────────── */
 addUrlBtn.addEventListener('click', () => {
   const raw = urlInput.value.trim();
   if (!raw) return;
-
   const ytId = getYouTubeId(raw);
   if (ytId) {
     addToLibrary({ videoId: ytId, title: titleInput.value.trim() || raw, channel: '', thumb: ytThumb(ytId) });
@@ -391,13 +319,11 @@ addUrlBtn.addEventListener('click', () => {
     saveItems();
     render();
   }
-
-  urlInput.value   = '';
+  urlInput.value = '';
   titleInput.value = '';
 });
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') addUrlBtn.click(); });
 
-/* ── Upload File ────────────────────────────────────────── */
 fileInput.addEventListener('change', () => {
   currentFile = fileInput.files[0] || null;
   fileNameEl.textContent = currentFile ? currentFile.name : 'No file chosen';
@@ -410,13 +336,12 @@ addFileBtn.addEventListener('click', () => {
   const title = titleInput.value.trim() || currentFile.name.replace(/\.[^.]+$/, '');
   items.unshift({ id: uid(), src, type, title, blob: true });
   render();
-  fileInput.value     = '';
+  fileInput.value = '';
   fileNameEl.textContent = 'No file chosen';
-  titleInput.value    = '';
-  currentFile         = null;
+  titleInput.value = '';
+  currentFile = null;
 });
 
-/* ── Remove Item ────────────────────────────────────────── */
 function removeItem(id) {
   const item = items.find(it => it.id === id);
   if (item?.blob && item.src) URL.revokeObjectURL(item.src);
@@ -425,7 +350,6 @@ function removeItem(id) {
   render();
 }
 
-/* ── Clear All ──────────────────────────────────────────── */
 clearBtn.addEventListener('click', () => {
   if (!confirm('Remove all items from your library?')) return;
   items.forEach(it => { if (it.blob && it.src) URL.revokeObjectURL(it.src); });
@@ -435,10 +359,8 @@ clearBtn.addEventListener('click', () => {
   render();
 });
 
-/* ── Close Player ───────────────────────────────────────── */
 closePlayer.addEventListener('click', () => {
   stopAllMedia();
-  // Restore native players
   const iframe = document.getElementById('ytFrame');
   if (iframe) {
     playerWrap.innerHTML = '';
@@ -450,7 +372,6 @@ closePlayer.addEventListener('click', () => {
   playerSection.classList.add('hidden');
 });
 
-/* ── Filter Nav ─────────────────────────────────────────── */
 navBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     navBtns.forEach(b => b.classList.remove('active'));
@@ -460,7 +381,7 @@ navBtns.forEach(btn => {
   });
 });
 
-/* ── Render Library ─────────────────────────────────────── */
+/* ── Render ─────────────────────────────────────────────── */
 function render() {
   const filtered = currentFilter === 'all'
     ? items
@@ -468,10 +389,7 @@ function render() {
 
   grid.innerHTML = '';
 
-  if (filtered.length === 0) {
-    empty.classList.remove('hidden');
-    return;
-  }
+  if (filtered.length === 0) { empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
 
   filtered.forEach(item => {
@@ -482,8 +400,7 @@ function render() {
     let thumbInner = item.type === 'video' ? '▶' : '♪';
     if (item.thumb) thumbInner = `<img src="${item.thumb}" alt="" loading="lazy" onerror="this.style.display='none'" />`;
 
-    const channelLine = item.channel
-      ? `<div class="card-channel">${item.channel}</div>` : '';
+    const channelLine = item.channel ? `<div class="card-channel">${item.channel}</div>` : '';
 
     card.innerHTML = `
       <div class="card-thumb">
@@ -512,5 +429,4 @@ function render() {
 }
 
 /* ── Init ───────────────────────────────────────────────── */
-initApiKeyUI();
 render();
