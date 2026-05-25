@@ -139,63 +139,75 @@ function ytThumb(videoId) {
   return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 }
 
+const progressWrap = $('progressWrap');
+const progressBar  = $('progressBar');
+
 /* ── Supabase Upload ────────────────────────────────────── */
 fileInput.addEventListener('change', () => {
   currentFile = fileInput.files[0] || null;
   fileNameEl.textContent = currentFile ? currentFile.name : 'No file chosen';
-  if (currentFile) addFileBtn.click();
+  if (currentFile) uploadFile();
 });
 
-addFileBtn.addEventListener('click', async () => {
-  if (!currentFile) return;
-
+function uploadFile() {
   const file  = currentFile;
   const fname = `${uid()}_${file.name.replace(/\s+/g, '_')}`;
   const type  = file.type.startsWith('video') ? 'video' : 'audio';
-  const title = titleInput.value.trim() || file.name.replace(/\.[^.]+$/, '');
+  const title = file.name.replace(/\.[^.]+$/, '');
 
   setUploadStatus('Uploading…', '#888');
+  progressWrap.classList.remove('hidden');
+  progressBar.style.width = '0%';
   addFileBtn.disabled = true;
 
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${fname}`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': file.type,
-          'x-upsert': 'true'
-        },
-        body: file
-      }
-    );
+  const xhr = new XMLHttpRequest();
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Upload failed');
+  xhr.upload.addEventListener('progress', e => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      progressBar.style.width = pct + '%';
+      setUploadStatus(`Uploading… ${pct}%`, '#888');
     }
+  });
 
-    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${fname}`;
+  xhr.addEventListener('load', () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${fname}`;
+      items.unshift({ id: uid(), src: publicUrl, type, title });
+      saveItems();
+      render();
+      progressBar.style.width = '100%';
+      setUploadStatus('✓ Uploaded', '#4caf50');
+      setTimeout(() => {
+        progressWrap.classList.add('hidden');
+        progressBar.style.width = '0%';
+        setUploadStatus('', '');
+      }, 3000);
+    } else {
+      setUploadStatus('✗ Upload failed', '#ff4444');
+      progressWrap.classList.add('hidden');
+      setTimeout(() => setUploadStatus('', ''), 4000);
+    }
+    addFileBtn.disabled = false;
+    fileInput.value        = '';
+    fileNameEl.textContent = 'No file chosen';
+    currentFile            = null;
+  });
 
-    items.unshift({ id: uid(), src: publicUrl, type, title });
-    saveItems();
-    render();
-
-    setUploadStatus('✓ Uploaded', '#4caf50');
-    setTimeout(() => setUploadStatus('', ''), 3000);
-
-  } catch (err) {
-    setUploadStatus(`✗ ${err.message}`, '#ff4444');
+  xhr.addEventListener('error', () => {
+    setUploadStatus('✗ Network error', '#ff4444');
+    progressWrap.classList.add('hidden');
     setTimeout(() => setUploadStatus('', ''), 4000);
-  }
+    addFileBtn.disabled = false;
+    currentFile = null;
+  });
 
-  addFileBtn.disabled = false;
-  fileInput.value        = '';
-  fileNameEl.textContent = 'No file chosen';
-  titleInput.value       = '';
-  currentFile            = null;
-});
+  xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${fname}`);
+  xhr.setRequestHeader('Authorization', `Bearer ${SUPABASE_KEY}`);
+  xhr.setRequestHeader('Content-Type', file.type);
+  xhr.setRequestHeader('x-upsert', 'true');
+  xhr.send(file);
+}
 
 function setUploadStatus(msg, color) {
   uploadStatus.textContent = msg;
