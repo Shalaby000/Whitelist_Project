@@ -493,3 +493,138 @@ button:not(.nav-btn):not(.search-row button):not(.card-del):not(#closePlayer):no
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE — max-width: 768px
+══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  body {
+    flex-direction: column;
+    overflow: hidden;
+    height: 100dvh;
+  }
+
+  /* ── Sidebar becomes bottom sheet ───────────────────────── */
+  #sidebar {
+    display: none;
+    position: fixed;
+    bottom: 56px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 70vh;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    z-index: 1000;
+    padding: 20px 16px 16px;
+    gap: 18px;
+    overflow-y: auto;
+    flex-direction: column;
+  }
+
+  #sidebar.open { display: flex; }
+
+  .logo { display: none; }
+
+  /* ── Bottom nav bar ─────────────────────────────────────── */
+  #bottomNav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 1001;
+    align-items: stretch;
+  }
+
+  .bnav-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--sub);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.12s;
+    padding: 0;
+    width: auto !important;
+  }
+  .bnav-btn.active { color: var(--accent); }
+  .bnav-btn:hover  { color: var(--text); }
+
+  /* ── Main area ──────────────────────────────────────────── */
+  #main {
+    flex: 1;
+    overflow: hidden;
+    padding-bottom: 56px;
+  }
+
+  /* ── Top search ─────────────────────────────────────────── */
+  #topSearch {
+    padding: 10px 12px;
+  }
+
+  #searchBarWrap input {
+    font-size: 14px;
+    padding: 9px 12px;
+  }
+
+  #searchBarWrap button {
+    padding: 9px 14px !important;
+    font-size: 13px !important;
+  }
+
+  /* ── Player ─────────────────────────────────────────────── */
+  #ytFrame { min-height: 200px; max-height: 35vh; }
+  #videoPlayer { max-height: 35vh; }
+
+  /* ── Search results ─────────────────────────────────────── */
+  #searchPanel { max-height: 55vh; }
+
+  .result-card { padding: 10px 12px; gap: 10px; }
+
+  .result-thumb {
+    width: 120px;
+    min-width: 120px;
+  }
+
+  .result-title { font-size: 12px; }
+  .result-channel { font-size: 11px; }
+
+  .result-add {
+    opacity: 1 !important;
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+  }
+
+  /* ── Library grid ───────────────────────────────────────── */
+  #gridSection { padding: 12px; }
+
+  #grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  /* ── Card delete always visible on mobile ───────────────── */
+  .card-del { opacity: 1 !important; }
+
+  /* ── Nav filter buttons horizontal ─────────────────────── */
+  nav {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .nav-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+  }
+
+}
