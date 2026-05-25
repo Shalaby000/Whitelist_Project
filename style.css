@@ -178,6 +178,7 @@ button:not(.nav-btn):not(.search-row button):not(.card-del):not(#closePlayer):no
 .upload-label:hover { background: var(--border2); }
 
 #fileName { color: var(--sub); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#uploadStatus { font-size: 11px; min-height: 14px; transition: color 0.2s; }
 
 .danger-btn {
   background: none !important;

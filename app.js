@@ -4,14 +4,17 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-const STORAGE_KEY = 'media_items_v1';
-const YT_API_KEY  = 'AIzaSyAZUCqqyzKfbFLyRP7qOasCGTgsA65tyy0';
+const STORAGE_KEY    = 'media_items_v1';
+const YT_API_KEY     = 'AIzaSyAZUCqqyzKfbFLyRP7qOasCGTgsA65tyy0';
+const SUPABASE_URL   = 'https://ykbwyuazigomirpskdie.supabase.co';
+const SUPABASE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrYnd5dWF6aWdvbWlycHNrZGllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NjQ1MjksImV4cCI6MjA5NTI0MDUyOX0.-PWhM1i4xNgE0e77YehMBDCMMKTlQWf-PxjqJoTmdr4';
+const BUCKET         = 'BucketOne';
 
 /* ── State ──────────────────────────────────────────────── */
-let items         = loadItems();
-let currentFilter = 'all';
-let currentFile   = null;
-let panicActive   = false;
+let items            = loadItems();
+let currentFilter    = 'all';
+let currentFile      = null;
+let panicActive      = false;
 let searchPageTokens = [null];
 let searchPageIndex  = 0;
 let lastQuery        = '';
@@ -45,6 +48,7 @@ const searchEmpty   = $('searchEmpty');
 const closeSearch   = $('closeSearch');
 const prevPageBtn   = $('prevPageBtn');
 const nextPageBtn   = $('nextPageBtn');
+const uploadStatus  = $('uploadStatus');
 
 /* ── Panic Button ───────────────────────────────────────── */
 const panicBtn = document.createElement('button');
@@ -62,9 +66,7 @@ panicBtn.style.cssText = `
   cursor: pointer;
   margin-top: auto;
   align-self: flex-start;
-  transition: border-color 0.12s, color 0.12s !important;
 `;
-document.getElementById('sidebar').appendChild(panicBtn);
 document.getElementById('sidebar').appendChild(panicBtn);
 
 const panicOverlay = document.createElement('div');
@@ -135,6 +137,68 @@ function ytEmbed(videoId) {
 
 function ytThumb(videoId) {
   return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+}
+
+/* ── Supabase Upload ────────────────────────────────────── */
+fileInput.addEventListener('change', () => {
+  currentFile = fileInput.files[0] || null;
+  fileNameEl.textContent = currentFile ? currentFile.name : 'No file chosen';
+});
+
+addFileBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+
+  const file  = currentFile;
+  const fname = `${uid()}_${file.name.replace(/\s+/g, '_')}`;
+  const type  = file.type.startsWith('video') ? 'video' : 'audio';
+  const title = titleInput.value.trim() || file.name.replace(/\.[^.]+$/, '');
+
+  setUploadStatus('Uploading…', '#888');
+  addFileBtn.disabled = true;
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${fname}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        },
+        body: file
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Upload failed');
+    }
+
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${fname}`;
+
+    items.unshift({ id: uid(), src: publicUrl, type, title });
+    saveItems();
+    render();
+
+    setUploadStatus('✓ Uploaded', '#4caf50');
+    setTimeout(() => setUploadStatus('', ''), 3000);
+
+  } catch (err) {
+    setUploadStatus(`✗ ${err.message}`, '#ff4444');
+    setTimeout(() => setUploadStatus('', ''), 4000);
+  }
+
+  addFileBtn.disabled = false;
+  fileInput.value        = '';
+  fileNameEl.textContent = 'No file chosen';
+  titleInput.value       = '';
+  currentFile            = null;
+});
+
+function setUploadStatus(msg, color) {
+  uploadStatus.textContent = msg;
+  uploadStatus.style.color = color;
 }
 
 /* ── YouTube Search ─────────────────────────────────────── */
@@ -328,24 +392,6 @@ addUrlBtn.addEventListener('click', () => {
 
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') addUrlBtn.click(); });
 
-fileInput.addEventListener('change', () => {
-  currentFile = fileInput.files[0] || null;
-  fileNameEl.textContent = currentFile ? currentFile.name : 'No file chosen';
-});
-
-addFileBtn.addEventListener('click', () => {
-  if (!currentFile) return;
-  const src   = URL.createObjectURL(currentFile);
-  const type  = currentFile.type.startsWith('video') ? 'video' : 'audio';
-  const title = titleInput.value.trim() || currentFile.name.replace(/\.[^.]+$/, '');
-  items.unshift({ id: uid(), src, type, title, blob: true });
-  render();
-  fileInput.value        = '';
-  fileNameEl.textContent = 'No file chosen';
-  titleInput.value       = '';
-  currentFile            = null;
-});
-
 function removeItem(id) {
   const item = items.find(it => it.id === id);
   if (item?.blob && item.src) URL.revokeObjectURL(item.src);
@@ -356,7 +402,6 @@ function removeItem(id) {
 
 clearBtn.addEventListener('click', () => {
   if (!confirm('Remove all items from your library?')) return;
-  items.forEach(it => { if (it.blob && it.src) URL.revokeObjectURL(it.src); });
   items = [];
   localStorage.removeItem(STORAGE_KEY);
   closePlayer.click();
