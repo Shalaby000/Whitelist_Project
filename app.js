@@ -143,6 +143,7 @@ function ytThumb(videoId) {
 fileInput.addEventListener('change', () => {
   currentFile = fileInput.files[0] || null;
   fileNameEl.textContent = currentFile ? currentFile.name : 'No file chosen';
+  if (currentFile) addFileBtn.click();
 });
 
 addFileBtn.addEventListener('click', async () => {
