@@ -496,6 +496,43 @@ function render() {
   });
 }
 
+/* ── Mobile Bottom Nav ──────────────────────────────────── */
+const bottomNav  = $('bottomNav');
+const bnavAll    = $('bnavAll');
+const bnavUpload = $('bnavUpload');
+const bnavMenu   = $('bnavMenu');
+
+if (bottomNav) {
+  const sidebar = $('sidebar');
+
+  bnavAll.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    bnavAll.classList.add('active');
+    bnavMenu.classList.remove('active');
+  });
+
+  bnavUpload.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    fileInput.click();
+  });
+
+  bnavMenu.addEventListener('click', () => {
+    const isOpen = sidebar.classList.toggle('open');
+    bnavMenu.classList.toggle('active', isOpen);
+    bnavAll.classList.remove('active');
+  });
+
+  // Close sidebar when tapping outside
+  document.addEventListener('click', e => {
+    if (sidebar.classList.contains('open') &&
+        !sidebar.contains(e.target) &&
+        !bnavMenu.contains(e.target)) {
+      sidebar.classList.remove('open');
+      bnavMenu.classList.remove('active');
+    }
+  });
+}
+
 /* ── Init ───────────────────────────────────────────────── */
 render();
 
