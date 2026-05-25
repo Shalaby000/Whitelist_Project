@@ -151,7 +151,13 @@ fileInput.addEventListener('change', () => {
 
 function uploadFile() {
   const file  = currentFile;
-  const fname = `${uid()}_${file.name.replace(/\s+/g, '_')}`;
+  const safeName = file.name
+    .replace(/[^\x00-\x7F]/g, '')  // remove non-ASCII (Arabic etc.)
+    .replace(/\s+/g, '_')           // spaces to underscores
+    .replace(/[^a-zA-Z0-9._-]/g, '') // remove any remaining special chars
+    || 'file';                        // fallback if name becomes empty
+  const ext   = file.name.split('.').pop();
+  const fname = `${uid()}_${safeName || 'upload'}.${ext}`;
   const type  = file.type.startsWith('video') ? 'video' : 'audio';
   const title = file.name.replace(/\.[^.]+$/, '');
 
