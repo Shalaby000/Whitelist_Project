@@ -4,7 +4,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-const YT_API_KEY   = 'AIzaSyAZUCqqyzKfbFLyRP7qOasCGTgsA65tyy0';
 const SUPABASE_URL = 'https://ykbwyuazigomirpskdie.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrYnd5dWF6aWdvbWlycHNrZGllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NjQ1MjksImV4cCI6MjA5NTI0MDUyOX0.-PWhM1i4xNgE0e77YehMBDCMMKTlQWf-PxjqJoTmdr4';
 const BUCKET       = 'BucketOne';
@@ -14,6 +13,61 @@ const DB_HEADERS   = {
   'Content-Type': 'application/json',
   'Prefer': 'return=representation'
 };
+
+// Password hash — SHA-256 of 'qweq'
+const PASSWORD_HASH = 'f0a5a4779b1653b5b6f372bc1da9e175b27fd31d3c9cc7dbde1fa7e5fa78ea41';
+
+let YT_API_KEY = '';
+
+/* ── Login ──────────────────────────────────────────────── */
+const loginScreen = document.getElementById('loginScreen');
+const loginInput  = document.getElementById('loginInput');
+const loginBtn    = document.getElementById('loginBtn');
+const loginError  = document.getElementById('loginError');
+
+async function hashPassword(str) {
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function tryLogin() {
+  const hash = await hashPassword(loginInput.value);
+  if (hash === PASSWORD_HASH) {
+    sessionStorage.setItem('auth', '1');
+    loginScreen.classList.add('hidden');
+    await initApp();
+  } else {
+    loginError.textContent = 'Incorrect password';
+    loginInput.value = '';
+    loginInput.focus();
+    setTimeout(() => { loginError.textContent = ''; }, 2000);
+  }
+}
+
+loginBtn.addEventListener('click', tryLogin);
+loginInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+
+// Check if already authenticated this session
+if (sessionStorage.getItem('auth') === '1') {
+  loginScreen.classList.add('hidden');
+  initApp();
+}
+
+async function fetchApiKey() {
+  try {
+    const res  = await fetch(`${SUPABASE_URL}/rest/v1/config?key=eq.yt_api_key&select=value`, { headers: DB_HEADERS });
+    const data = await res.json();
+    if (data?.[0]?.value) YT_API_KEY = data[0].value;
+  } catch(e) { console.error('Failed to fetch API key', e); }
+}
+
+async function initApp() {
+  await fetchApiKey();
+  await dbLoad();
+  setupApp();
+}
+
+function setupApp() {
 
 /* ── State ──────────────────────────────────────────────── */
 let items            = [];
@@ -574,7 +628,8 @@ if (bottomNav) {
   });
 }
 
-/* ── Init ───────────────────────────────────────────────── */
-dbLoad();
+render();
+
+} // end setupApp
 
 }); // end DOMContentLoaded
