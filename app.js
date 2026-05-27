@@ -15,7 +15,7 @@ const DB_HEADERS   = {
 };
 
 // Password hash — SHA-256 of 'qweq'
-const PASSWORD_HASH = 'f0a5a4779b1653b5b6f372bc1da9e175b27fd31d3c9cc7dbde1fa7e5fa78ea41';
+const PASSWORD_HASH = '99452b87584654dcce539e9b7618bf342964a00bd258dd46950f4bca75db07f8';
 
 let YT_API_KEY = '';
 
