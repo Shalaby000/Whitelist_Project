@@ -63,8 +63,8 @@ async function fetchApiKey() {
 
 async function initApp() {
   await fetchApiKey();
-  await dbLoad();
   setupApp();
+  await dbLoad();
 }
 
 function setupApp() {
@@ -627,8 +627,6 @@ if (bottomNav) {
     }
   });
 }
-
-render();
 
 } // end setupApp
 
