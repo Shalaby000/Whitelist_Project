@@ -5,75 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
   <meta name="googlebot" content="noindex, nofollow" />
-  <title>Media</title>
+  <title>Whitelist</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
+  <!-- LOGIN -->
   <div id="loginScreen">
     <div id="loginBox">
-      <div id="loginLogo">▶ media</div>
+      <div id="loginLogo">▶ whitelist</div>
       <input id="loginInput" type="password" placeholder="Enter password…" autocomplete="current-password" />
       <button id="loginBtn">Enter</button>
       <span id="loginError"></span>
     </div>
   </div>
 
-  <!-- SIDEBAR -->
-  <aside id="sidebar">
-    <div class="logo">▶ media</div>
+  <!-- APP -->
+  <div id="app" class="hidden">
 
-    <nav>
-      <button class="nav-btn active" data-filter="all">All</button>
-      <button class="nav-btn" data-filter="video">Videos</button>
-      <button class="nav-btn" data-filter="audio">Audios</button>
-    </nav>
-
-    <!-- ADD FROM URL -->
-    <div class="sidebar-section">
-      <p class="section-label">Add from URL</p>
-      <input id="urlInput" type="text" placeholder="Paste a link…" />
-      <input id="titleInput" type="text" placeholder="Title (optional)" />
-      <button id="addUrlBtn">Add</button>
-    </div>
-
-    <!-- UPLOAD FILE -->
-    <div class="sidebar-section">
-      <p class="section-label">Upload file</p>
-      <label class="upload-label" for="fileInput">Choose file</label>
-      <input id="fileInput" type="file" accept="video/*,audio/*" hidden />
-      <span id="fileName">No file chosen</span>
-      <button id="addFileBtn" style="display:none">Upload</button>
-      <div id="progressWrap" class="hidden">
-        <div id="progressBar"></div>
-      </div>
-      <span id="uploadStatus"></span>
-    </div>
-
-    <div class="sidebar-section">
-      <button id="clearBtn" class="danger-btn">Clear library</button>
-    </div>
-  </aside>
-
-  <!-- MAIN AREA -->
-  <main id="main">
-
-    <!-- TOP SEARCH BAR -->
-    <div id="topSearch">
-      <div id="searchBarWrap">
-        <input id="searchInput" type="text" placeholder="Search YouTube…" autocomplete="off" />
-        <button id="searchBtn">Search</button>
-      </div>
-    </div>
+    <!-- HEADER -->
+    <header id="header">
+      <span class="logo">▶ whitelist</span>
+      <button id="panicBtn" title="Hide screen (K)">⬜</button>
+    </header>
 
     <!-- PLAYER -->
     <section id="playerSection" class="hidden">
       <div id="playerWrap">
-        <video id="videoPlayer" controls></video>
         <audio id="audioPlayer" controls></audio>
       </div>
       <div id="nowPlaying">
@@ -82,38 +43,63 @@
       </div>
     </section>
 
-    <!-- SEARCH RESULTS PANEL -->
-    <section id="searchPanel" class="hidden">
-      <div id="searchHeader">
-        <span id="searchLabel"></span>
-        <button id="closeSearch">✕ Close results</button>
-      </div>
-      <div id="searchGrid"></div>
-      <div id="searchLoading" class="hidden">Searching…</div>
-      <div id="searchEmpty" class="hidden">No results found.</div>
-      <div id="searchPagination">
-        <button id="prevPageBtn" class="hidden">← Prev</button>
-        <button id="nextPageBtn" class="hidden">Next →</button>
-      </div>
-    </section>
+    <!-- MAIN CONTENT -->
+    <div id="content">
 
-    <!-- LIBRARY GRID -->
-    <section id="gridSection">
-      <div id="grid"></div>
+      <!-- ADD SECTION -->
+      <div id="addSection">
+
+        <!-- URL -->
+        <div class="add-block">
+          <p class="add-label">Paste audio URL</p>
+          <div class="add-row">
+            <input id="urlInput" type="text" placeholder="https://…" />
+            <input id="titleInput" type="text" placeholder="Title (optional)" />
+            <button id="addUrlBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="divider">or</div>
+
+        <!-- UPLOAD -->
+        <div class="add-block">
+          <p class="add-label">Upload file</p>
+          <div class="add-row">
+            <label class="upload-label" for="fileInput">Choose file</label>
+            <input id="fileInput" type="file" accept="audio/*" hidden />
+            <span id="fileName">No file chosen</span>
+          </div>
+          <div id="progressWrap" class="hidden">
+            <div id="progressBar"></div>
+          </div>
+          <span id="uploadStatus"></span>
+          <button id="addFileBtn" style="display:none"></button>
+        </div>
+
+      </div>
+
+      <!-- FILTERS -->
+      <div id="filterRow">
+        <div id="filterBtns">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="audio">Audio</button>
+        </div>
+        <button id="clearBtn" class="danger-btn">Clear library</button>
+      </div>
+
+      <!-- LIBRARY -->
+      <div id="library"></div>
       <div id="empty">
         <p>Your library is empty.</p>
-        <p class="sub">Search YouTube or add a URL from the sidebar.</p>
+        <p class="sub">Upload a file or paste an audio URL above.</p>
       </div>
-    </section>
 
-  </main>
+    </div>
 
-  <!-- MOBILE BOTTOM NAV -->
-  <nav id="bottomNav">
-    <button class="bnav-btn" id="bnavAll"     title="Library">⊞</button>
-    <button class="bnav-btn" id="bnavUpload"  title="Upload">⬆</button>
-    <button class="bnav-btn" id="bnavMenu"    title="More">☰</button>
-  </nav>
+  </div>
+
+  <!-- PANIC OVERLAY -->
+  <div id="panicOverlay"></div>
 
   <script src="app.js"></script>
 </body>
