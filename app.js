@@ -171,26 +171,73 @@ fileInput.addEventListener('change', () => {
   const files = Array.from(fileInput.files);
   if (!files.length) return;
   fileNameEl.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
-  uploadQueue.innerHTML = '';
-  files.forEach(file => uploadFile(file));
+  files.forEach(file => prepareUpload(file));
   fileInput.value = '';
 });
 
-async function uploadFile(file) {
+function getBaseName(file) {
+  return file.name.replace(/\.[^.]+$/, '').toLowerCase().trim();
+}
+
+function isDuplicate(file) {
+  const base = getBaseName(file);
+  return items.some(it => (it.title || '').toLowerCase().trim() === base);
+}
+
+function prepareUpload(file) {
+  if (isDuplicate(file)) {
+    showDuplicateWarning(file);
+  } else {
+    uploadFile(file, file.name);
+  }
+}
+
+function showDuplicateWarning(file) {
+  const item = document.createElement('div');
+  item.className = 'upload-item duplicate-warning';
+  item.innerHTML = `
+    <div class="upload-item-header">
+      <span class="upload-item-name" title="${file.name}">${file.name}</span>
+      <span class="upload-item-status" style="color:#f0a500">⚠ Already exists</span>
+    </div>
+    <div class="duplicate-actions">
+      <input class="rename-input" type="text" placeholder="New name (without extension)" />
+      <button class="dup-rename-btn">Rename & Upload</button>
+      <button class="dup-skip-btn">Skip</button>
+    </div>
+  `;
+  uploadQueue.appendChild(item);
+
+  const renameInput = item.querySelector('.rename-input');
+  const renameBtn   = item.querySelector('.dup-rename-btn');
+  const skipBtn     = item.querySelector('.dup-skip-btn');
+
+  renameBtn.addEventListener('click', () => {
+    const newName = renameInput.value.trim();
+    if (!newName) { renameInput.focus(); return; }
+    const ext = file.name.split('.').pop();
+    const renamedFile = new File([file], `${newName}.${ext}`, { type: file.type });
+    item.remove();
+    uploadFile(renamedFile, renamedFile.name);
+  });
+
+  skipBtn.addEventListener('click', () => item.remove());
+}
+
+async function uploadFile(file, displayName) {
   const safeName = file.name
     .replace(/[^\x00-\x7F]/g, '')
     .replace(/\s+/g, '_')
     .replace(/[^a-zA-Z0-9._-]/g, '') || 'file';
   const ext   = file.name.split('.').pop();
   const fname = `${uid()}_${safeName}.${ext}`;
-  const title = file.name.replace(/\.[^.]+$/, '');
+  const title = displayName.replace(/\.[^.]+$/, '');
 
-  // Create progress item UI
   const item = document.createElement('div');
   item.className = 'upload-item';
   item.innerHTML = `
     <div class="upload-item-header">
-      <span class="upload-item-name" title="${file.name}">${file.name}</span>
+      <span class="upload-item-name" title="${displayName}">${displayName}</span>
       <span class="upload-item-status" style="color:var(--sub)">Preparing…</span>
     </div>
     <div class="upload-item-bar-wrap">
@@ -201,64 +248,88 @@ async function uploadFile(file) {
 
   const statusEl = item.querySelector('.upload-item-status');
   const barEl    = item.querySelector('.upload-item-bar');
+  const headerEl = item.querySelector('.upload-item-header');
 
   function setStatus(msg, color) {
     statusEl.textContent = msg;
     statusEl.style.color = color;
   }
 
-  try {
-    const urlRes = await fetch(`${API}/upload-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: fname, mimetype: file.type })
-    });
-    const { uploadUrl, publicUrl } = await urlRes.json();
+  async function doUpload() {
+    // Remove retry button if present
+    const existingRetry = item.querySelector('.retry-btn');
+    if (existingRetry) existingRetry.remove();
+    barEl.className = 'upload-item-bar';
+    barEl.style.width = '0%';
+    setStatus('Preparing…', 'var(--sub)');
 
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-
-      xhr.upload.addEventListener('progress', e => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          barEl.style.width = pct + '%';
-          setStatus(`${pct}%`, '#888');
-        }
+    try {
+      const urlRes = await fetch(`${API}/upload-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: fname, mimetype: file.type })
       });
+      const { uploadUrl, publicUrl } = await urlRes.json();
 
-      xhr.addEventListener('load', async () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          barEl.style.width = '100%';
-          barEl.classList.add('done');
-          setStatus('✓ Done', '#4caf50');
-          const newItem = { id: uid(), src: publicUrl, type: 'audio', title };
-          items.unshift(newItem);
-          render();
-          await dbInsert(newItem);
-          setTimeout(() => item.remove(), 4000);
-          resolve();
-        } else {
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', e => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            barEl.style.width = pct + '%';
+            setStatus(`${pct}%`, '#888');
+          }
+        });
+
+        xhr.addEventListener('load', async () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            barEl.style.width = '100%';
+            barEl.classList.add('done');
+            setStatus('✓ Done', '#4caf50');
+            const newItem = { id: uid(), src: publicUrl, type: 'audio', title };
+            items.unshift(newItem);
+            render();
+            await dbInsert(newItem);
+            setTimeout(() => item.remove(), 4000);
+            resolve();
+          } else {
+            barEl.classList.add('error');
+            setStatus('✗ Failed', '#ff4444');
+            addRetryBtn();
+            reject();
+          }
+        });
+
+        xhr.addEventListener('error', () => {
           barEl.classList.add('error');
-          setStatus('✗ Failed', '#ff4444');
+          setStatus('✗ Network error', '#ff4444');
+          addRetryBtn();
           reject();
-        }
+        });
+
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.send(file);
       });
 
-      xhr.addEventListener('error', () => {
-        barEl.classList.add('error');
-        setStatus('✗ Network error', '#ff4444');
-        reject();
-      });
-
-      xhr.open('PUT', uploadUrl);
-      xhr.setRequestHeader('Content-Type', file.type);
-      xhr.send(file);
-    });
-
-  } catch {
-    barEl.classList.add('error');
-    setStatus('✗ Failed', '#ff4444');
+    } catch {
+      barEl.classList.add('error');
+      setStatus('✗ Failed', '#ff4444');
+      addRetryBtn();
+    }
   }
+
+  function addRetryBtn() {
+    if (item.querySelector('.retry-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'retry-btn';
+    btn.textContent = '↺ Retry';
+    btn.addEventListener('click', doUpload);
+    headerEl.appendChild(btn);
+  }
+
+  doUpload();
 }
 
 /* ── Play ───────────────────────────────────────────────── */

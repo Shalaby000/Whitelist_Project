@@ -312,6 +312,60 @@ html, body {
 .upload-item-bar.done  { background: #4caf50; }
 .upload-item-bar.error { background: #ff4444; }
 
+.duplicate-warning {
+  border: 1px solid #3a2800;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: #1a1200;
+}
+
+.duplicate-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rename-input {
+  flex: 1;
+  min-width: 120px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 6px 10px;
+  outline: none;
+}
+.rename-input::placeholder { color: var(--muted); }
+
+.dup-rename-btn, .dup-skip-btn, .retry-btn {
+  background: var(--border2);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 11px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+.dup-rename-btn:hover, .retry-btn:hover { background: #333; }
+.dup-skip-btn { color: var(--sub); }
+.dup-skip-btn:hover { background: #1a1a1a; }
+
+.retry-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  color: #f0a500;
+  border: 1px solid #3a2800;
+  background: transparent;
+}
+
 .divider {
   text-align: center;
   font-size: 11px;
