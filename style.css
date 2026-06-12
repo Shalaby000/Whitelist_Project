@@ -260,24 +260,57 @@ html, body {
   max-width: 200px;
 }
 
-#uploadStatus { font-size: 12px; min-height: 16px; margin-top: 8px; }
+#uploadQueue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
 
-#progressWrap {
+.upload-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upload-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.upload-item-name {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.upload-item-status {
+  font-size: 11px;
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+
+.upload-item-bar-wrap {
   width: 100%;
   height: 3px;
   background: var(--border);
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 10px;
 }
-#progressWrap.hidden { display: none; }
-#progressBar {
+
+.upload-item-bar {
   height: 100%;
   width: 0%;
-  background: #4caf50;
   border-radius: 2px;
   transition: width 0.2s ease;
+  background: var(--muted);
 }
+.upload-item-bar.done  { background: #4caf50; }
+.upload-item-bar.error { background: #ff4444; }
 
 .divider {
   text-align: center;

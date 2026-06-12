@@ -10,7 +10,6 @@ const PASSWORD_HASH = '99452b87584654dcce539e9b7618bf342964a00bd258dd46950f4bca7
 /* ── State ──────────────────────────────────────────────── */
 let items         = [];
 let currentFilter = 'all';
-let currentFile   = null;
 let panicActive   = false;
 let nowPlayingId  = null;
 
@@ -34,9 +33,7 @@ const addUrlBtn    = $('addUrlBtn');
 const fileInput    = $('fileInput');
 const fileNameEl   = $('fileName');
 const addFileBtn   = $('addFileBtn');
-const progressWrap = $('progressWrap');
-const progressBar  = $('progressBar');
-const uploadStatus = $('uploadStatus');
+const uploadQueue  = $('uploadQueue');
 const clearBtn     = $('clearBtn');
 const filterBtns   = document.querySelectorAll('.filter-btn');
 const library      = $('library');
@@ -171,25 +168,44 @@ urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') addUrlBtn.cli
 
 /* ── Upload ─────────────────────────────────────────────── */
 fileInput.addEventListener('change', () => {
-  currentFile = fileInput.files[0] || null;
-  fileNameEl.textContent = currentFile ? currentFile.name : 'No file chosen';
-  if (currentFile) uploadFile();
+  const files = Array.from(fileInput.files);
+  if (!files.length) return;
+  fileNameEl.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+  uploadQueue.innerHTML = '';
+  files.forEach(file => uploadFile(file));
+  fileInput.value = '';
 });
 
-async function uploadFile() {
-  const file     = currentFile;
+async function uploadFile(file) {
   const safeName = file.name
     .replace(/[^\x00-\x7F]/g, '')
     .replace(/\s+/g, '_')
     .replace(/[^a-zA-Z0-9._-]/g, '') || 'file';
   const ext   = file.name.split('.').pop();
   const fname = `${uid()}_${safeName}.${ext}`;
-  const type  = 'audio';
   const title = file.name.replace(/\.[^.]+$/, '');
 
-  setUploadStatus('Preparing…', '#888');
-  progressWrap.classList.remove('hidden');
-  progressBar.style.width = '0%';
+  // Create progress item UI
+  const item = document.createElement('div');
+  item.className = 'upload-item';
+  item.innerHTML = `
+    <div class="upload-item-header">
+      <span class="upload-item-name" title="${file.name}">${file.name}</span>
+      <span class="upload-item-status" style="color:var(--sub)">Preparing…</span>
+    </div>
+    <div class="upload-item-bar-wrap">
+      <div class="upload-item-bar"></div>
+    </div>
+  `;
+  uploadQueue.appendChild(item);
+
+  const statusEl = item.querySelector('.upload-item-status');
+  const barEl    = item.querySelector('.upload-item-bar');
+
+  function setStatus(msg, color) {
+    statusEl.textContent = msg;
+    statusEl.style.color = color;
+  }
 
   try {
     const urlRes = await fetch(`${API}/upload-url`, {
@@ -199,61 +215,50 @@ async function uploadFile() {
     });
     const { uploadUrl, publicUrl } = await urlRes.json();
 
-    const xhr = new XMLHttpRequest();
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
 
-    xhr.upload.addEventListener('progress', e => {
-      if (e.lengthComputable) {
-        const pct = Math.round((e.loaded / e.total) * 100);
-        progressBar.style.width = pct + '%';
-        setUploadStatus(`Uploading… ${pct}%`, '#888');
-      }
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          barEl.style.width = pct + '%';
+          setStatus(`${pct}%`, '#888');
+        }
+      });
+
+      xhr.addEventListener('load', async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          barEl.style.width = '100%';
+          barEl.classList.add('done');
+          setStatus('✓ Done', '#4caf50');
+          const newItem = { id: uid(), src: publicUrl, type: 'audio', title };
+          items.unshift(newItem);
+          render();
+          await dbInsert(newItem);
+          setTimeout(() => item.remove(), 4000);
+          resolve();
+        } else {
+          barEl.classList.add('error');
+          setStatus('✗ Failed', '#ff4444');
+          reject();
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        barEl.classList.add('error');
+        setStatus('✗ Network error', '#ff4444');
+        reject();
+      });
+
+      xhr.open('PUT', uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.send(file);
     });
 
-    xhr.addEventListener('load', async () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        const item = { id: uid(), src: publicUrl, type, title };
-        items.unshift(item);
-        render();
-        await dbInsert(item);
-        progressBar.style.width = '100%';
-        setUploadStatus('✓ Uploaded', '#4caf50');
-        setTimeout(() => {
-          progressWrap.classList.add('hidden');
-          progressBar.style.width = '0%';
-          setUploadStatus('', '');
-        }, 3000);
-      } else {
-        setUploadStatus('✗ Upload failed', '#ff4444');
-        progressWrap.classList.add('hidden');
-        setTimeout(() => setUploadStatus('', ''), 4000);
-      }
-      fileInput.value        = '';
-      fileNameEl.textContent = 'No file chosen';
-      currentFile            = null;
-    });
-
-    xhr.addEventListener('error', () => {
-      setUploadStatus('✗ Network error', '#ff4444');
-      progressWrap.classList.add('hidden');
-      setTimeout(() => setUploadStatus('', ''), 4000);
-      currentFile = null;
-    });
-
-    xhr.open('PUT', uploadUrl);
-    xhr.setRequestHeader('Content-Type', file.type);
-    xhr.send(file);
-
-  } catch(err) {
-    setUploadStatus('✗ Failed to get upload URL', '#ff4444');
-    progressWrap.classList.add('hidden');
-    setTimeout(() => setUploadStatus('', ''), 4000);
-    currentFile = null;
+  } catch {
+    barEl.classList.add('error');
+    setStatus('✗ Failed', '#ff4444');
   }
-}
-
-function setUploadStatus(msg, color) {
-  uploadStatus.textContent = msg;
-  uploadStatus.style.color = color;
 }
 
 /* ── Play ───────────────────────────────────────────────── */

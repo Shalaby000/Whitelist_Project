@@ -63,16 +63,13 @@
 
         <!-- UPLOAD -->
         <div class="add-block">
-          <p class="add-label">Upload file</p>
+          <p class="add-label">Upload files</p>
           <div class="add-row">
-            <label class="upload-label" for="fileInput">Choose file</label>
-            <input id="fileInput" type="file" accept="audio/*" hidden />
-            <span id="fileName">No file chosen</span>
+            <label class="upload-label" for="fileInput">Choose files</label>
+            <input id="fileInput" type="file" accept="audio/*" multiple hidden />
+            <span id="fileName">No files chosen</span>
           </div>
-          <div id="progressWrap" class="hidden">
-            <div id="progressBar"></div>
-          </div>
-          <span id="uploadStatus"></span>
+          <div id="uploadQueue"></div>
           <button id="addFileBtn" style="display:none"></button>
         </div>
 
