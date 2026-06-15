@@ -29,17 +29,36 @@
     <!-- HEADER -->
     <header id="header">
       <span class="logo">▶ whitelist</span>
-      <button id="panicBtn" title="Hide screen (K)">⬜</button>
+      <div id="headerActions">
+        <button id="searchToggleBtn" title="Search library">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <button id="panicBtn" title="Hide screen (K)">⬜</button>
+      </div>
     </header>
+
+    <!-- SEARCH BAR (hidden by default) -->
+    <div id="searchBar" class="hidden">
+      <input id="searchQuery" type="text" placeholder="Search your library…" autocomplete="off" />
+      <button id="searchClearBtn">✕</button>
+    </div>
 
     <!-- PLAYER -->
     <section id="playerSection" class="hidden">
-      <div id="playerWrap">
-        <audio id="audioPlayer" controls></audio>
-      </div>
-      <div id="nowPlaying">
-        <span id="nowTitle"></span>
-        <button id="closePlayer">✕</button>
+      <div id="playerInner">
+        <div id="playerTop">
+          <div id="playerMeta">
+            <div id="nowTitle"></div>
+          </div>
+          <button id="closePlayer" title="Close">✕</button>
+        </div>
+        <audio id="audioPlayer" preload="metadata"></audio>
+        <div id="playerControls">
+          <button id="prevBtn" title="Previous">⏮</button>
+          <button id="shuffleBtn" title="Shuffle" class="ctrl-btn">⇄</button>
+          <button id="repeatBtn" title="Repeat" class="ctrl-btn">↻</button>
+          <button id="nextBtn" title="Next">⏭</button>
+        </div>
       </div>
     </section>
 
@@ -81,7 +100,6 @@
           <button class="filter-btn active" data-filter="all">All</button>
           <button class="filter-btn" data-filter="audio">Audio</button>
         </div>
-        <button id="clearBtn" class="danger-btn">Clear library</button>
       </div>
 
       <!-- LIBRARY -->
@@ -93,6 +111,18 @@
 
     </div>
 
+  </div>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div id="deleteModal" class="hidden">
+    <div id="deleteBox">
+      <p id="deleteMsg"></p>
+      <p id="deleteWarning">This action cannot be undone.</p>
+      <div id="deleteActions">
+        <button id="deleteCancelBtn">Cancel</button>
+        <button id="deleteConfirmBtn">Delete</button>
+      </div>
+    </div>
   </div>
 
   <!-- PANIC OVERLAY -->

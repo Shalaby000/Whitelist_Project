@@ -4,40 +4,55 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-const API          = 'https://pk58vbedrk.execute-api.eu-west-1.amazonaws.com/prod';
+const API           = 'https://pk58vbedrk.execute-api.eu-west-1.amazonaws.com/prod';
 const PASSWORD_HASH = '99452b87584654dcce539e9b7618bf342964a00bd258dd46950f4bca75db07f8';
 
 /* ── State ──────────────────────────────────────────────── */
 let items         = [];
 let currentFilter = 'all';
+let searchQuery   = '';
 let panicActive   = false;
 let nowPlayingId  = null;
+let isShuffled    = false;
+let repeatMode    = 'none'; // 'none' | 'one' | 'all'
+let shuffledOrder = [];
 
 /* ── DOM ────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
 
-const loginScreen  = $('loginScreen');
-const loginInput   = $('loginInput');
-const loginBtn     = $('loginBtn');
-const loginError   = $('loginError');
-const app          = $('app');
-const panicBtn     = $('panicBtn');
-const panicOverlay = $('panicOverlay');
-const playerSection= $('playerSection');
-const audioPlayer  = $('audioPlayer');
-const nowTitle     = $('nowTitle');
-const closePlayer  = $('closePlayer');
-const urlInput     = $('urlInput');
-const titleInput   = $('titleInput');
-const addUrlBtn    = $('addUrlBtn');
-const fileInput    = $('fileInput');
-const fileNameEl   = $('fileName');
-const addFileBtn   = $('addFileBtn');
-const uploadQueue  = $('uploadQueue');
-const clearBtn     = $('clearBtn');
-const filterBtns   = document.querySelectorAll('.filter-btn');
-const library      = $('library');
-const empty        = $('empty');
+const loginScreen    = $('loginScreen');
+const loginInput     = $('loginInput');
+const loginBtn       = $('loginBtn');
+const loginError     = $('loginError');
+const app            = $('app');
+const panicBtn       = $('panicBtn');
+const panicOverlay   = $('panicOverlay');
+const searchToggleBtn= $('searchToggleBtn');
+const searchBar      = $('searchBar');
+const searchQueryEl  = $('searchQuery');
+const searchClearBtn = $('searchClearBtn');
+const playerSection  = $('playerSection');
+const audioPlayer    = $('audioPlayer');
+const nowTitle       = $('nowTitle');
+const closePlayer    = $('closePlayer');
+const prevBtn        = $('prevBtn');
+const nextBtn        = $('nextBtn');
+const shuffleBtn     = $('shuffleBtn');
+const repeatBtn      = $('repeatBtn');
+const urlInput       = $('urlInput');
+const titleInput     = $('titleInput');
+const addUrlBtn      = $('addUrlBtn');
+const fileInput      = $('fileInput');
+const fileNameEl     = $('fileName');
+const uploadQueue    = $('uploadQueue');
+const filterBtns     = document.querySelectorAll('.filter-btn');
+const library        = $('library');
+const empty          = $('empty');
+const deleteModal    = $('deleteModal');
+const deleteMsg      = $('deleteMsg');
+const deleteWarning  = $('deleteWarning');
+const deleteCancelBtn= $('deleteCancelBtn');
+const deleteConfirmBtn=$('deleteConfirmBtn');
 
 /* ── Login ──────────────────────────────────────────────── */
 async function hashPassword(str) {
@@ -84,7 +99,6 @@ function deactivatePanic() {
   panicActive = false;
   panicOverlay.style.display = 'none';
 }
-
 panicBtn.addEventListener('click', () => panicActive ? deactivatePanic() : activatePanic());
 panicOverlay.addEventListener('click', deactivatePanic);
 document.addEventListener('keydown', e => {
@@ -94,18 +108,33 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ── AWS DB ──────────────────────────────────────────────── */
+/* ── Search ─────────────────────────────────────────────── */
+searchToggleBtn.addEventListener('click', () => {
+  const open = searchBar.classList.toggle('hidden');
+  searchToggleBtn.classList.toggle('active', !open);
+  if (!open) searchQueryEl.focus();
+  else { searchQuery = ''; searchQueryEl.value = ''; render(); }
+});
+
+searchQueryEl.addEventListener('input', () => {
+  searchQuery = searchQueryEl.value.toLowerCase().trim();
+  render();
+});
+
+searchClearBtn.addEventListener('click', () => {
+  searchQuery = '';
+  searchQueryEl.value = '';
+  searchQueryEl.focus();
+  render();
+});
+
+/* ── DB ─────────────────────────────────────────────────── */
 async function dbLoad() {
   try {
     const res  = await fetch(`${API}/library`);
     const data = await res.json();
     if (Array.isArray(data)) {
-      items = data.map(r => ({
-        id:    r.id,
-        src:   r.src,
-        type:  r.type,
-        title: r.title,
-      }));
+      items = data.map(r => ({ id: r.id, src: r.src, type: r.type || 'audio', title: r.title }));
       render();
     }
   } catch(e) { console.error('Library load failed', e); }
@@ -116,16 +145,7 @@ async function dbInsert(item) {
     await fetch(`${API}/library`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id:      item.id,
-        src:     item.src    || '',
-        type:    item.type,
-        title:   item.title,
-        videoid: '',
-        channel: '',
-        thumb:   '',
-        youtube: false,
-      })
+      body: JSON.stringify({ id: item.id, src: item.src || '', type: item.type, title: item.title, videoid: '', channel: '', thumb: '', youtube: false })
     });
   } catch(e) { console.error('DB insert failed', e); }
 }
@@ -136,28 +156,15 @@ async function dbDelete(id) {
   } catch(e) { console.error('DB delete failed', e); }
 }
 
-async function dbClear() {
-  try {
-    await fetch(`${API}/library`, { method: 'DELETE' });
-  } catch(e) { console.error('DB clear failed', e); }
-}
-
 /* ── Helpers ────────────────────────────────────────────── */
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
-function detectType(src) {
-  return 'audio';
-}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
 /* ── Add URL ────────────────────────────────────────────── */
 addUrlBtn.addEventListener('click', async () => {
   const raw   = urlInput.value.trim();
   if (!raw) return;
-  const type  = detectType(raw);
   const title = titleInput.value.trim() || raw.split('/').pop().split('?')[0] || 'Untitled';
-  const item  = { id: uid(), src: raw, type, title };
+  const item  = { id: uid(), src: raw, type: 'audio', title };
   items.unshift(item);
   render();
   await dbInsert(item);
@@ -175,89 +182,85 @@ fileInput.addEventListener('change', () => {
   fileInput.value = '';
 });
 
-function getBaseName(file) {
-  return file.name.replace(/\.[^.]+$/, '').toLowerCase().trim();
-}
+function getTitle(file) { return file.name.replace(/\.[^.]+$/, ''); }
 
 function isDuplicate(file) {
-  const base = getBaseName(file);
-  return items.some(it => (it.title || '').toLowerCase().trim() === base);
+  const title = getTitle(file).toLowerCase().trim();
+  return items.some(it => (it.title || '').toLowerCase().trim() === title);
 }
 
 function prepareUpload(file) {
-  if (isDuplicate(file)) {
-    showDuplicateWarning(file);
-  } else {
-    uploadFile(file, file.name);
-  }
+  if (isDuplicate(file)) showDuplicateWarning(file);
+  else uploadFile(file, file.name);
 }
 
 function showDuplicateWarning(file) {
-  const item = document.createElement('div');
-  item.className = 'upload-item duplicate-warning';
-  item.innerHTML = `
+  const el = document.createElement('div');
+  el.className = 'upload-item duplicate-warning';
+  el.innerHTML = `
     <div class="upload-item-header">
-      <span class="upload-item-name" title="${file.name}">${file.name}</span>
-      <span class="upload-item-status" style="color:#f0a500">⚠ Already exists</span>
+      <span class="upload-item-name" title="${file.name}">⚠ Already exists: <strong>${getTitle(file)}</strong></span>
     </div>
+    <p style="font-size:11px;color:var(--sub);margin-top:6px;">A track with this name is already in your library.</p>
     <div class="duplicate-actions">
       <input class="rename-input" type="text" placeholder="New name (without extension)" />
       <button class="dup-rename-btn">Rename & Upload</button>
       <button class="dup-skip-btn">Skip</button>
     </div>
   `;
-  uploadQueue.appendChild(item);
+  uploadQueue.appendChild(el);
 
-  const renameInput = item.querySelector('.rename-input');
-  const renameBtn   = item.querySelector('.dup-rename-btn');
-  const skipBtn     = item.querySelector('.dup-skip-btn');
+  const renameInput = el.querySelector('.rename-input');
+  const renameBtn   = el.querySelector('.dup-rename-btn');
+  const skipBtn     = el.querySelector('.dup-skip-btn');
 
   renameBtn.addEventListener('click', () => {
     const newName = renameInput.value.trim();
     if (!newName) { renameInput.focus(); return; }
     const ext = file.name.split('.').pop();
-    const renamedFile = new File([file], `${newName}.${ext}`, { type: file.type });
-    item.remove();
-    uploadFile(renamedFile, renamedFile.name);
+    const renamed = new File([file], `${newName}.${ext}`, { type: file.type });
+    el.remove();
+    uploadFile(renamed, renamed.name);
   });
-
-  skipBtn.addEventListener('click', () => item.remove());
+  skipBtn.addEventListener('click', () => el.remove());
 }
 
 async function uploadFile(file, displayName) {
-  const safeName = file.name
-    .replace(/[^\x00-\x7F]/g, '')
-    .replace(/\s+/g, '_')
-    .replace(/[^a-zA-Z0-9._-]/g, '') || 'file';
+  const safeName = file.name.replace(/[^\x00-\x7F]/g,'').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9._-]/g,'') || 'file';
   const ext   = file.name.split('.').pop();
   const fname = `${uid()}_${safeName}.${ext}`;
   const title = displayName.replace(/\.[^.]+$/, '');
 
-  const item = document.createElement('div');
-  item.className = 'upload-item';
-  item.innerHTML = `
+  const el = document.createElement('div');
+  el.className = 'upload-item';
+  el.innerHTML = `
     <div class="upload-item-header">
       <span class="upload-item-name" title="${displayName}">${displayName}</span>
       <span class="upload-item-status" style="color:var(--sub)">Preparing…</span>
+      <button class="upload-cancel-btn" title="Cancel">✕</button>
     </div>
-    <div class="upload-item-bar-wrap">
-      <div class="upload-item-bar"></div>
-    </div>
+    <div class="upload-item-bar-wrap"><div class="upload-item-bar"></div></div>
   `;
-  uploadQueue.appendChild(item);
+  uploadQueue.appendChild(el);
 
-  const statusEl = item.querySelector('.upload-item-status');
-  const barEl    = item.querySelector('.upload-item-bar');
-  const headerEl = item.querySelector('.upload-item-header');
+  const statusEl  = el.querySelector('.upload-item-status');
+  const barEl     = el.querySelector('.upload-item-bar');
+  const headerEl  = el.querySelector('.upload-item-header');
+  const cancelBtn = el.querySelector('.upload-cancel-btn');
 
-  function setStatus(msg, color) {
-    statusEl.textContent = msg;
-    statusEl.style.color = color;
-  }
+  let xhr = null;
+  let cancelled = false;
+
+  cancelBtn.addEventListener('click', () => {
+    cancelled = true;
+    if (xhr) xhr.abort();
+    el.remove();
+  });
+
+  function setStatus(msg, color) { statusEl.textContent = msg; statusEl.style.color = color; }
 
   async function doUpload() {
-    // Remove retry button if present
-    const existingRetry = item.querySelector('.retry-btn');
+    const existingRetry = el.querySelector('.retry-btn');
     if (existingRetry) existingRetry.remove();
     barEl.className = 'upload-item-bar';
     barEl.style.width = '0%';
@@ -269,10 +272,14 @@ async function uploadFile(file, displayName) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: fname, mimetype: file.type })
       });
-      const { uploadUrl, publicUrl } = await urlRes.json();
+      const json = await urlRes.json();
+      const uploadUrl = json.uploadUrl;
+      const publicUrl = json.publicUrl;
+
+      if (!uploadUrl) throw new Error('No upload URL returned');
 
       await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
+        xhr = new XMLHttpRequest();
 
         xhr.upload.addEventListener('progress', e => {
           if (e.lengthComputable) {
@@ -287,11 +294,12 @@ async function uploadFile(file, displayName) {
             barEl.style.width = '100%';
             barEl.classList.add('done');
             setStatus('✓ Done', '#4caf50');
+            cancelBtn.style.display = 'none';
             const newItem = { id: uid(), src: publicUrl, type: 'audio', title };
             items.unshift(newItem);
             render();
             await dbInsert(newItem);
-            setTimeout(() => item.remove(), 4000);
+            setTimeout(() => el.remove(), 4000);
             resolve();
           } else {
             barEl.classList.add('error');
@@ -302,18 +310,22 @@ async function uploadFile(file, displayName) {
         });
 
         xhr.addEventListener('error', () => {
+          if (cancelled) return;
           barEl.classList.add('error');
           setStatus('✗ Network error', '#ff4444');
           addRetryBtn();
           reject();
         });
 
+        xhr.addEventListener('abort', () => resolve());
+
         xhr.open('PUT', uploadUrl);
         xhr.setRequestHeader('Content-Type', file.type);
         xhr.send(file);
       });
 
-    } catch {
+    } catch(err) {
+      if (cancelled) return;
       barEl.classList.add('error');
       setStatus('✗ Failed', '#ff4444');
       addRetryBtn();
@@ -321,18 +333,28 @@ async function uploadFile(file, displayName) {
   }
 
   function addRetryBtn() {
-    if (item.querySelector('.retry-btn')) return;
+    if (el.querySelector('.retry-btn')) return;
     const btn = document.createElement('button');
     btn.className = 'retry-btn';
     btn.textContent = '↺ Retry';
     btn.addEventListener('click', doUpload);
-    headerEl.appendChild(btn);
+    headerEl.insertBefore(btn, cancelBtn);
   }
 
   doUpload();
 }
 
-/* ── Play ───────────────────────────────────────────────── */
+/* ── Player ─────────────────────────────────────────────── */
+function getQueue() {
+  const filtered = visibleItems();
+  return filtered;
+}
+
+function currentIndex() {
+  if (isShuffled) return shuffledOrder.indexOf(nowPlayingId);
+  return getQueue().findIndex(it => it.id === nowPlayingId);
+}
+
 function playItem(item) {
   audioPlayer.src = item.src;
   audioPlayer.play();
@@ -342,6 +364,54 @@ function playItem(item) {
   render();
 }
 
+audioPlayer.addEventListener('ended', () => {
+  if (repeatMode === 'one') { audioPlayer.play(); return; }
+  const queue = getQueue();
+  if (!queue.length) return;
+  const idx = currentIndex();
+  if (repeatMode === 'all' || idx < queue.length - 1) {
+    const next = queue[(idx + 1) % queue.length];
+    if (next) playItem(next);
+  } else {
+    nowPlayingId = null;
+    playerSection.classList.add('hidden');
+    render();
+  }
+});
+
+prevBtn.addEventListener('click', () => {
+  const queue = getQueue();
+  if (!queue.length) return;
+  const idx = currentIndex();
+  const prev = queue[idx <= 0 ? queue.length - 1 : idx - 1];
+  if (prev) playItem(prev);
+});
+
+nextBtn.addEventListener('click', () => {
+  const queue = getQueue();
+  if (!queue.length) return;
+  const idx = currentIndex();
+  const next = queue[(idx + 1) % queue.length];
+  if (next) playItem(next);
+});
+
+shuffleBtn.addEventListener('click', () => {
+  isShuffled = !isShuffled;
+  shuffleBtn.classList.toggle('active', isShuffled);
+  if (isShuffled) {
+    shuffledOrder = [...getQueue().map(it => it.id)].sort(() => Math.random() - 0.5);
+  }
+});
+
+repeatBtn.addEventListener('click', () => {
+  if (repeatMode === 'none') repeatMode = 'all';
+  else if (repeatMode === 'all') repeatMode = 'one';
+  else repeatMode = 'none';
+  repeatBtn.classList.toggle('active', repeatMode !== 'none');
+  repeatBtn.title = repeatMode === 'one' ? 'Repeat: One' : repeatMode === 'all' ? 'Repeat: All' : 'Repeat: Off';
+  repeatBtn.textContent = repeatMode === 'one' ? '↻¹' : '↻';
+});
+
 closePlayer.addEventListener('click', () => {
   audioPlayer.pause();
   audioPlayer.src = '';
@@ -350,21 +420,38 @@ closePlayer.addEventListener('click', () => {
   render();
 });
 
-/* ── Remove ─────────────────────────────────────────────── */
-async function removeItem(id) {
+/* ── Delete Modal ────────────────────────────────────────── */
+let pendingDeleteId = null;
+
+function confirmDelete(id, title) {
+  pendingDeleteId = id;
+  deleteMsg.textContent = `Delete "${title}" from your library?`;
+  deleteWarning.textContent = 'This action cannot be undone. The track will be permanently removed.';
+  deleteModal.classList.remove('hidden');
+}
+
+deleteCancelBtn.addEventListener('click', () => {
+  deleteModal.classList.add('hidden');
+  pendingDeleteId = null;
+});
+
+deleteConfirmBtn.addEventListener('click', async () => {
+  if (!pendingDeleteId) return;
+  deleteModal.classList.add('hidden');
+  const id = pendingDeleteId;
+  pendingDeleteId = null;
   if (nowPlayingId === id) closePlayer.click();
   items = items.filter(it => it.id !== id);
   render();
   await dbDelete(id);
-}
+});
 
-/* ── Clear ──────────────────────────────────────────────── */
-clearBtn.addEventListener('click', async () => {
-  if (!confirm('Remove all items from your library?')) return;
-  closePlayer.click();
-  items = [];
-  render();
-  await dbClear();
+// Close modal on backdrop click
+deleteModal.addEventListener('click', e => {
+  if (e.target === deleteModal) {
+    deleteModal.classList.add('hidden');
+    pendingDeleteId = null;
+  }
 });
 
 /* ── Filter ─────────────────────────────────────────────── */
@@ -377,33 +464,30 @@ filterBtns.forEach(btn => {
   });
 });
 
+function visibleItems() {
+  let list = currentFilter === 'all' ? items : items.filter(it => it.type === currentFilter);
+  if (searchQuery) list = list.filter(it => (it.title || '').toLowerCase().includes(searchQuery));
+  return list;
+}
+
 /* ── Render ─────────────────────────────────────────────── */
 function render() {
-  const filtered = currentFilter === 'all'
-    ? items
-    : items.filter(it => it.type === currentFilter);
-
+  const filtered = visibleItems();
   library.innerHTML = '';
 
-  if (!filtered.length) {
-    empty.classList.remove('hidden');
-    return;
-  }
+  if (!filtered.length) { empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
 
-  filtered.forEach(item => {
+  filtered.forEach((item, idx) => {
     const row = document.createElement('div');
     row.className = 'audio-row' + (item.id === nowPlayingId ? ' playing' : '');
 
-    const icon = '♪';
-
     row.innerHTML = `
-      <div class="audio-icon">${icon}</div>
+      <span class="audio-num">${item.id === nowPlayingId ? '♪' : idx + 1}</span>
       <div class="audio-info">
         <div class="audio-title" title="${item.title}">${item.title}</div>
-        <div class="audio-type">${item.type}</div>
       </div>
-      <button class="row-del" title="Remove">✕</button>
+      <button class="row-del" title="Delete">✕</button>
     `;
 
     row.addEventListener('click', e => {
@@ -413,7 +497,7 @@ function render() {
 
     row.querySelector('.row-del').addEventListener('click', e => {
       e.stopPropagation();
-      removeItem(item.id);
+      confirmDelete(item.id, item.title);
     });
 
     library.appendChild(row);
