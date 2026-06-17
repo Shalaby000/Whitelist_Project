@@ -148,16 +148,56 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   gap: 16px;
 }
 
-#prevBtn, #nextBtn {
+#prevBtn, #nextBtn, #stopBtn, #playPauseBtn {
   background: none;
   border: none;
   color: var(--sub);
   font-size: 18px;
   cursor: pointer;
-  padding: 4px;
+  padding: 4px 8px;
   transition: color 0.12s;
 }
-#prevBtn:hover, #nextBtn:hover { color: var(--text); }
+#prevBtn:hover, #nextBtn:hover, #stopBtn:hover, #playPauseBtn:hover { color: var(--text); }
+#playPauseBtn { font-size: 20px; color: var(--accent); }
+#playPauseBtn:hover { color: #ccc; }
+
+#volumeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+#volumeIcon { font-size: 14px; flex-shrink: 0; cursor: pointer; }
+
+#volumeSlider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+#volumeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+#volumeVal {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--sub);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
 
 .ctrl-btn {
   background: none;

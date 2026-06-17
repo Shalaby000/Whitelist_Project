@@ -37,8 +37,13 @@ const nowTitle       = $('nowTitle');
 const closePlayer    = $('closePlayer');
 const prevBtn        = $('prevBtn');
 const nextBtn        = $('nextBtn');
+const playPauseBtn   = $('playPauseBtn');
+const stopBtn        = $('stopBtn');
 const shuffleBtn     = $('shuffleBtn');
 const repeatBtn      = $('repeatBtn');
+const volumeSlider   = $('volumeSlider');
+const volumeVal      = $('volumeVal');
+const volumeIcon     = $('volumeIcon');
 const urlInput       = $('urlInput');
 const titleInput     = $('titleInput');
 const addUrlBtn      = $('addUrlBtn');
@@ -357,10 +362,12 @@ function currentIndex() {
 
 function playItem(item) {
   audioPlayer.src = item.src;
+  audioPlayer.volume = parseFloat(volumeSlider.value);
   audioPlayer.play();
   nowTitle.textContent = item.title;
   playerSection.classList.remove('hidden');
   nowPlayingId = item.id;
+  updatePlayPauseBtn();
   render();
 }
 
@@ -411,6 +418,54 @@ repeatBtn.addEventListener('click', () => {
   repeatBtn.title = repeatMode === 'one' ? 'Repeat: One' : repeatMode === 'all' ? 'Repeat: All' : 'Repeat: Off';
   repeatBtn.textContent = repeatMode === 'one' ? '↻¹' : '↻';
 });
+
+/* ── Play/Pause & Stop ──────────────────────────────────── */
+function updatePlayPauseBtn() {
+  playPauseBtn.textContent = audioPlayer.paused ? '▶' : '⏸';
+}
+
+playPauseBtn.addEventListener('click', () => {
+  if (audioPlayer.paused) audioPlayer.play();
+  else audioPlayer.pause();
+});
+
+stopBtn.addEventListener('click', () => {
+  audioPlayer.pause();
+  audioPlayer.currentTime = 0;
+  updatePlayPauseBtn();
+});
+
+audioPlayer.addEventListener('play',  updatePlayPauseBtn);
+audioPlayer.addEventListener('pause', updatePlayPauseBtn);
+
+/* ── Volume ─────────────────────────────────────────────── */
+// Fix auto-volume-down bug — disable any browser audio normalization
+audioPlayer.preservesPitch = true;
+
+function setVolume(v) {
+  audioPlayer.volume = v;
+  volumeSlider.value = v;
+  volumeVal.textContent = Math.round(v * 100) + '%';
+  volumeIcon.textContent = v === 0 ? '🔇' : v < 0.5 ? '🔉' : '🔊';
+}
+
+volumeSlider.addEventListener('input', () => setVolume(parseFloat(volumeSlider.value)));
+
+// Mute/unmute on icon click
+let lastVolume = 1;
+volumeIcon.addEventListener('click', () => {
+  if (audioPlayer.volume > 0) { lastVolume = audioPlayer.volume; setVolume(0); }
+  else setVolume(lastVolume);
+});
+
+// Prevent browser from silently changing volume
+audioPlayer.addEventListener('volumechange', () => {
+  volumeSlider.value = audioPlayer.volume;
+  volumeVal.textContent = Math.round(audioPlayer.volume * 100) + '%';
+  volumeIcon.textContent = audioPlayer.volume === 0 ? '🔇' : audioPlayer.volume < 0.5 ? '🔉' : '🔊';
+});
+
+setVolume(1);
 
 closePlayer.addEventListener('click', () => {
   audioPlayer.pause();
