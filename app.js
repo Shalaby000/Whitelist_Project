@@ -5,7 +5,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
 const API           = 'https://pk58vbedrk.execute-api.eu-west-1.amazonaws.com/prod';
-const PASSWORD_HASH = '99452b87584654dcce539e9b7618bf342964a00bd258dd46950f4bca75db07f8';
 
 /* ── State ──────────────────────────────────────────────── */
 let items         = [];
@@ -14,8 +13,9 @@ let searchQuery   = '';
 let panicActive   = false;
 let nowPlayingId  = null;
 let isShuffled    = false;
-let repeatMode    = 'none'; // 'none' | 'one' | 'all'
+let repeatMode    = 'none';
 let shuffledOrder = [];
+let SESSION_TOKEN = sessionStorage.getItem('wl_token') || '';
 
 /* ── DOM ────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -60,33 +60,62 @@ const deleteCancelBtn= $('deleteCancelBtn');
 const deleteConfirmBtn=$('deleteConfirmBtn');
 
 /* ── Login ──────────────────────────────────────────────── */
-async function hashPassword(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
 async function tryLogin() {
-  const hash = await hashPassword(loginInput.value);
-  if (hash === PASSWORD_HASH) {
-    sessionStorage.setItem('auth', '1');
-    loginScreen.classList.add('hidden');
-    app.classList.remove('hidden');
-    await initApp();
-  } else {
-    loginError.textContent = 'Incorrect password';
-    loginInput.value = '';
-    loginInput.focus();
-    setTimeout(() => { loginError.textContent = ''; }, 2000);
+  loginBtn.disabled = true;
+  loginError.textContent = '';
+  try {
+    const res  = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: loginInput.value })
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      SESSION_TOKEN = data.token;
+      sessionStorage.setItem('wl_token', SESSION_TOKEN);
+      loginScreen.classList.add('hidden');
+      app.classList.remove('hidden');
+      await initApp();
+    } else {
+      loginError.textContent = 'Incorrect password';
+      loginInput.value = '';
+      loginInput.focus();
+      setTimeout(() => { loginError.textContent = ''; }, 2000);
+    }
+  } catch {
+    loginError.textContent = 'Connection error — try again';
   }
+  loginBtn.disabled = false;
 }
 
 loginBtn.addEventListener('click', tryLogin);
 loginInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
 
-if (sessionStorage.getItem('auth') === '1') {
+if (SESSION_TOKEN) {
   loginScreen.classList.add('hidden');
   app.classList.remove('hidden');
   initApp();
+}
+
+/* ── Authenticated fetch ────────────────────────────────── */
+async function authFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Session-Token': SESSION_TOKEN,
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    // Token expired — force re-login
+    SESSION_TOKEN = '';
+    sessionStorage.removeItem('wl_token');
+    loginScreen.classList.remove('hidden');
+    app.classList.add('hidden');
+    loginError.textContent = 'Session expired — please log in again';
+  }
+  return res;
 }
 
 /* ── Init ───────────────────────────────────────────────── */
@@ -136,7 +165,7 @@ searchClearBtn.addEventListener('click', () => {
 /* ── DB ─────────────────────────────────────────────────── */
 async function dbLoad() {
   try {
-    const res  = await fetch(`${API}/library`);
+    const res  = await authFetch(`${API}/library`);
     const data = await res.json();
     if (Array.isArray(data)) {
       items = data.map(r => ({ id: r.id, src: r.src, type: r.type || 'audio', title: r.title }));
@@ -147,17 +176,16 @@ async function dbLoad() {
 
 async function dbInsert(item) {
   try {
-    await fetch(`${API}/library`, {
+    await authFetch(`${API}/library`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: item.id, src: item.src || '', type: item.type, title: item.title, videoid: '', channel: '', thumb: '', youtube: false })
+      body: JSON.stringify({ id: item.id, src: item.src || '', type: item.type, title: item.title })
     });
   } catch(e) { console.error('DB insert failed', e); }
 }
 
 async function dbDelete(id) {
   try {
-    await fetch(`${API}/library/${id}`, { method: 'DELETE' });
+    await authFetch(`${API}/library/${id}`, { method: 'DELETE' });
   } catch(e) { console.error('DB delete failed', e); }
 }
 
@@ -272,9 +300,8 @@ async function uploadFile(file, displayName) {
     setStatus('Preparing…', 'var(--sub)');
 
     try {
-      const urlRes = await fetch(`${API}/upload-url`, {
+      const urlRes = await authFetch(`${API}/upload-url`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: fname, mimetype: file.type })
       });
       const json = await urlRes.json();
