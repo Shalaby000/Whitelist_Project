@@ -38,9 +38,11 @@ const closePlayer    = $('closePlayer');
 const prevBtn        = $('prevBtn');
 const nextBtn        = $('nextBtn');
 const playPauseBtn   = $('playPauseBtn');
-const stopBtn        = $('stopBtn');
 const shuffleBtn     = $('shuffleBtn');
 const repeatBtn      = $('repeatBtn');
+const seekSlider     = $('seekSlider');
+const timeElapsed    = $('timeElapsed');
+const timeTotal      = $('timeTotal');
 const volumeSlider   = $('volumeSlider');
 const volumeVal      = $('volumeVal');
 const volumeIcon     = $('volumeIcon');
@@ -456,10 +458,30 @@ playPauseBtn.addEventListener('click', () => {
   else audioPlayer.pause();
 });
 
-stopBtn.addEventListener('click', () => {
-  audioPlayer.pause();
-  audioPlayer.currentTime = 0;
-  updatePlayPauseBtn();
+/* ── Seek bar ────────────────────────────────────────────── */
+function formatTime(s) {
+  if (isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+audioPlayer.addEventListener('timeupdate', () => {
+  if (!audioPlayer.duration) return;
+  const pct = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+  seekSlider.value = pct;
+  timeElapsed.textContent = formatTime(audioPlayer.currentTime);
+});
+
+audioPlayer.addEventListener('loadedmetadata', () => {
+  timeTotal.textContent = formatTime(audioPlayer.duration);
+  seekSlider.value = 0;
+  timeElapsed.textContent = '0:00';
+});
+
+seekSlider.addEventListener('input', () => {
+  if (!audioPlayer.duration) return;
+  audioPlayer.currentTime = (seekSlider.value / 100) * audioPlayer.duration;
 });
 
 audioPlayer.addEventListener('play',  updatePlayPauseBtn);
