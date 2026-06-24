@@ -481,6 +481,26 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 #empty.hidden { display: none; }
 #empty .sub { font-size: 12px; color: var(--border2); }
 
+/* ── Storage Indicator ───────────────────────────────────── */
+#storageIndicator {
+  position: fixed;
+  bottom: 14px;
+  right: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  z-index: 50;
+  cursor: default;
+  user-select: none;
+}
+#storageIndicator.hidden { display: none; }
+#storageIndicator.warn { color: #f0a500; border-color: #3a2800; }
+#storageIndicator.danger { color: #ff4444; border-color: #3a1515; }
+
 /* ── Panic ───────────────────────────────────────────────── */
 #panicOverlay { display: none; position: fixed; inset: 0; background: #fff; z-index: 99999; cursor: pointer; }
 

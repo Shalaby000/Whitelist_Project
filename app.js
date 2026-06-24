@@ -123,6 +123,30 @@ async function authFetch(url, options = {}) {
 /* ── Init ───────────────────────────────────────────────── */
 async function initApp() {
   await dbLoad();
+  loadStorageStats();
+}
+
+/* ── Storage Indicator ──────────────────────────────────── */
+const storageIndicator = $('storageIndicator');
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
+async function loadStorageStats() {
+  try {
+    const res  = await authFetch(`${API}/storage-stats`);
+    const data = await res.json();
+    if (data.totalBytes === undefined) return;
+
+    storageIndicator.textContent = `${data.fileCount} file${data.fileCount === 1 ? '' : 's'} · ${formatBytes(data.totalBytes)} / 5 GB`;
+    storageIndicator.classList.remove('hidden', 'warn', 'danger');
+    if (data.percentUsed >= 90) storageIndicator.classList.add('danger');
+    else if (data.percentUsed >= 70) storageIndicator.classList.add('warn');
+  } catch(e) { console.error('Storage stats failed', e); }
 }
 
 /* ── Panic ──────────────────────────────────────────────── */
@@ -333,6 +357,7 @@ async function uploadFile(file, displayName) {
             items.unshift(newItem);
             render();
             await dbInsert(newItem);
+            loadStorageStats();
             setTimeout(() => el.remove(), 4000);
             resolve();
           } else {
